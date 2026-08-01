@@ -1,0 +1,266 @@
+import React from 'react';
+import { useWorkspace } from '../../context/WorkspaceContext';
+import { ApplicationStatus, JobCategory, PriorityLevel, WorkArrangement } from '../../types';
+import { OpportunityCard } from './OpportunityCard';
+import { OpportunityTable } from './OpportunityTable';
+import {
+  Filter,
+  Grid,
+  List,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
+
+export const OpportunityCatalog: React.FC = () => {
+  const {
+    filteredOpportunities,
+    catalogViewMode,
+    setCatalogViewMode,
+    searchQuery,
+    setSearchQuery,
+    selectedCategory,
+    setSelectedCategory,
+    selectedStatus,
+    setSelectedStatus,
+    selectedWorkArrangement,
+    setSelectedWorkArrangement,
+    selectedPriority,
+    setSelectedPriority,
+    selectedTag,
+    setSelectedTag,
+    sortBy,
+    setSortBy,
+    resetFilters,
+  } = useWorkspace();
+
+  const categories: (JobCategory | 'All')[] = [
+    'All',
+    'Software Engineering',
+    'Data Science',
+    'Graduate Programme',
+    'Internship',
+    'Product & Design',
+    'Finance & Fintech',
+    'Cybersecurity',
+    'Other',
+  ];
+
+  const statuses: (ApplicationStatus | 'All')[] = ['All', ...Object.values(ApplicationStatus)];
+
+  const arrangements: (WorkArrangement | 'All')[] = ['All', 'Remote', 'Hybrid', 'On-site'];
+
+  const priorities: (PriorityLevel | 'All')[] = ['All', 'High', 'Medium', 'Low'];
+
+  const hasActiveFilters =
+    searchQuery !== '' ||
+    selectedCategory !== 'All' ||
+    selectedStatus !== 'All' ||
+    selectedWorkArrangement !== 'All' ||
+    selectedPriority !== 'All' ||
+    selectedTag !== null;
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* Category Pills Header */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            className={`px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              selectedCategory === cat
+                ? 'bg-slate-900 text-white border-b-2 border-b-blue-500 font-bold'
+                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Filter & Control Toolbar */}
+      <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          
+          {/* Filter Select Controls */}
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            
+            {/* Status Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span className="text-[11px] font-medium text-slate-500">Status:</span>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as ApplicationStatus | 'All')}
+                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+              >
+                {statuses.map((st) => (
+                  <option key={st} value={st} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                    {st}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Work Arrangement */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span className="text-[11px] font-medium text-slate-500">Work:</span>
+              <select
+                value={selectedWorkArrangement}
+                onChange={(e) => setSelectedWorkArrangement(e.target.value as WorkArrangement | 'All')}
+                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+              >
+                {arrangements.map((wa) => (
+                  <option key={wa} value={wa} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                    {wa}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Priority Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span className="text-[11px] font-medium text-slate-500">Priority:</span>
+              <select
+                value={selectedPriority}
+                onChange={(e) => setSelectedPriority(e.target.value as PriorityLevel | 'All')}
+                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+              >
+                {priorities.map((p) => (
+                  <option key={p} value={p} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sort Order */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span className="text-[11px] font-medium text-slate-500">Sort by:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'closingDate' | 'dateAdded' | 'company' | 'priority')}
+                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+              >
+                <option value="closingDate" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                  Closing Date (Soonest)
+                </option>
+                <option value="dateAdded" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                  Date Added (Newest)
+                </option>
+                <option value="company" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                  Company Name (A-Z)
+                </option>
+                <option value="priority" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                  Priority (Highest)
+                </option>
+              </select>
+            </div>
+
+            {/* Reset Filters */}
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-rose-600 hover:text-rose-700 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-800 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset</span>
+              </button>
+            )}
+          </div>
+
+          {/* Card vs Table View Mode Switcher */}
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <button
+              onClick={() => setCatalogViewMode('card')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                catalogViewMode === 'card'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-2xs font-bold'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+              title="Card Grid View"
+            >
+              <Grid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setCatalogViewMode('table')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                catalogViewMode === 'table'
+                  ? 'bg-white dark:bg-slate-900 text-emerald-600 shadow-2xs font-bold'
+                  : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+              title="Table Matrix View"
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Active Filter Chips */}
+        {hasActiveFilters && (
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-800 text-xs">
+            <span className="text-slate-400 font-medium">Active filters:</span>
+            {searchQuery && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium border">
+                Search: "{searchQuery}"
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setSearchQuery('')} />
+              </span>
+            )}
+            {selectedCategory !== 'All' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-medium border border-emerald-200 dark:border-emerald-800">
+                Cat: {selectedCategory}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setSelectedCategory('All')} />
+              </span>
+            )}
+            {selectedStatus !== 'All' && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 font-medium border border-sky-200 dark:border-sky-800">
+                Status: {selectedStatus}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setSelectedStatus('All')} />
+              </span>
+            )}
+            {selectedTag && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 font-medium border border-teal-200 dark:border-teal-800">
+                #{selectedTag}
+                <X className="w-3 h-3 cursor-pointer" onClick={() => setSelectedTag(null)} />
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Counter & Results Summary */}
+      <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1">
+        <span>
+          Showing <strong>{filteredOpportunities.length}</strong> of {filteredOpportunities.length} opportunities
+        </span>
+      </div>
+
+      {/* Main View Renderer */}
+      {catalogViewMode === 'card' ? (
+        filteredOpportunities.length === 0 ? (
+          <div className="p-12 text-center rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
+            <Filter className="w-10 h-10 text-slate-300 dark:text-slate-700 mx-auto" />
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              No job opportunities match your filters.
+            </p>
+            <button
+              onClick={resetFilters}
+              className="px-4 py-2 text-xs font-semibold text-emerald-600 bg-emerald-50 rounded-xl hover:bg-emerald-100"
+            >
+              Clear all filters
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredOpportunities.map((opp) => (
+              <OpportunityCard key={opp.id} opportunity={opp} />
+            ))}
+          </div>
+        )
+      ) : (
+        <OpportunityTable opportunities={filteredOpportunities} />
+      )}
+    </div>
+  );
+};
