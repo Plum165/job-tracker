@@ -14,29 +14,35 @@ export const StatusLegend: React.FC<StatusLegendProps> = ({
   onSelectStatus,
   compact = false,
 }) => {
-  const [isOpen, setIsOpen] = useState(true);
+  // Default to closed on mobile screens (< 640px)
+  const [isOpen, setIsOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 640;
+    }
+    return false;
+  });
 
   const statuses = Object.values(STATUS_COLOR_MAP);
 
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-2xs">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 overflow-hidden">
           <Info className="w-4 h-4 text-blue-500 shrink-0" />
-          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-            Application Status Color Legend & Quick Filter
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider truncate">
+            Status Color Key
           </span>
           {activeStatusFilter !== 'All' && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 shrink-0">
               Filtered: {activeStatusFilter}
             </span>
           )}
         </div>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs flex items-center gap-1 cursor-pointer"
+          className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 text-xs flex items-center gap-1 cursor-pointer shrink-0 py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 min-h-[36px]"
         >
-          <span className="text-[11px] font-medium">{isOpen ? 'Hide' : 'Show'} Key</span>
+          <span className="text-[11px] font-semibold">{isOpen ? 'Hide' : 'Show'} Key</span>
           {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
