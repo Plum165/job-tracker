@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
-import { getDeadlineStatusBadge } from '../../lib/dateUtils';
+import { formatDateDisplay, getDeadlineStatusBadge } from '../../lib/dateUtils';
+import { getStatusColorStyle } from '../../lib/statusColors';
 import { ApplicationStatus, JobOpportunity, PriorityLevel } from '../../types';
 import { ExternalLink, Eye, Star } from 'lucide-react';
 
@@ -27,15 +28,15 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({ opportunitie
   }
 
   return (
-    <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+    <div className="overflow-x-auto border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm rounded-xl">
       <table className="w-full text-left text-xs border-collapse">
         <thead>
           <tr className="bg-slate-100 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-[11px]">
             <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 w-12 text-center">Prio</th>
-            <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800">Shared Opportunity Info</th>
-            <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center">Deadline</th>
-            <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center">Category & Work</th>
-            <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800">Private Status (Local Storage)</th>
+            <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800">Company & Role</th>
+            <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center">Deadline & Dates</th>
+            <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center">Category & Type</th>
+            <th className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800">Application Status</th>
             <th className="py-3.5 px-4 text-right">Action</th>
           </tr>
         </thead>
@@ -43,11 +44,12 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({ opportunitie
           {opportunities.map((opp) => {
             const pState = getPrivateState(opp.id);
             const badge = getDeadlineStatusBadge(opp.closingDate);
+            const statusStyle = getStatusColorStyle(pState.status);
 
             return (
               <tr
                 key={opp.id}
-                className="hover:bg-slate-50 transition-colors group"
+                className={`${statusStyle.tableRowBg} transition-colors group`}
               >
                 {/* Priority */}
                 <td className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center">
@@ -61,7 +63,7 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({ opportunitie
                       updatePriority(opp.id, nextPrio[pState.priority]);
                     }}
                     title={`Priority: ${pState.priority}`}
-                    className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                    className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer"
                   >
                     <Star
                       className={`w-4 h-4 ${
@@ -80,19 +82,24 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({ opportunitie
                   <div className="font-bold text-slate-900 dark:text-slate-100">
                     {opp.companyName}
                   </div>
-                  <div className="text-sm text-slate-500">
+                  <div className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
                     {opp.jobTitle}
                   </div>
                 </td>
 
-                {/* Closing Date */}
+                {/* Closing Date & Explicit Dates */}
                 <td className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800 text-center">
-                  <div className="text-xs font-semibold text-slate-800 dark:text-slate-200">
-                    {opp.closingDate}
+                  <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                    {formatDateDisplay(opp.closingDate)}
                   </div>
-                  <span className={`inline-block text-[10px] uppercase font-bold px-2 py-0.5 mt-1 border ${badge.badgeClass}`}>
+                  <span className={`inline-block text-[10px] uppercase font-bold px-2 py-0.5 mt-1 border rounded ${badge.badgeClass}`}>
                     {badge.label}
                   </span>
+                  {pState.dateApplied && (
+                    <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold mt-0.5">
+                      Applied: {formatDateDisplay(pState.dateApplied)}
+                    </div>
+                  )}
                 </td>
 
                 {/* Category & Work */}
@@ -105,23 +112,23 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({ opportunitie
                   </div>
                 </td>
 
-                {/* My Status */}
+                {/* Status Dropdown with Status Color Styling */}
                 <td className="py-3.5 px-4 border-r border-slate-200 dark:border-slate-800">
                   <div className="flex items-center gap-2">
                     <select
                       value={pState.status}
                       onChange={(e) => updateStatus(opp.id, e.target.value as ApplicationStatus)}
-                      className="py-1 px-2 text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      className={`py-1 px-2 text-xs font-semibold ${statusStyle.badgeBg} focus:outline-none cursor-pointer rounded`}
                     >
                       {statusOptions.map((st) => (
-                        <option key={st} value={st}>
+                        <option key={st} value={st} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-normal">
                           {st}
                         </option>
                       ))}
                     </select>
                   </div>
                   {pState.personalNotes && (
-                    <p className="text-xs text-slate-500 italic mt-1 truncate">
+                    <p className="text-[11px] text-slate-500 italic mt-1 truncate max-w-xs">
                       "{pState.personalNotes}"
                     </p>
                   )}
@@ -140,7 +147,7 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({ opportunitie
                   </a>
                   <button
                     onClick={() => setSelectedOpportunity(opp)}
-                    className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-blue-300 border border-blue-200 dark:border-slate-700 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors cursor-pointer rounded border border-blue-500"
                   >
                     <Eye className="w-3.5 h-3.5" />
                     <span>Details</span>
@@ -154,3 +161,4 @@ export const OpportunityTable: React.FC<OpportunityTableProps> = ({ opportunitie
     </div>
   );
 };
+

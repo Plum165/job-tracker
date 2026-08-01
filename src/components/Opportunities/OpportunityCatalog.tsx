@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { ApplicationStatus, JobCategory, PriorityLevel, WorkArrangement } from '../../types';
+import { StatusLegend } from '../UI/StatusLegend';
 import { OpportunityCard } from './OpportunityCard';
 import { OpportunityTable } from './OpportunityTable';
 import {
@@ -63,6 +64,12 @@ export const OpportunityCatalog: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Status Legend Key & Filter */}
+      <StatusLegend
+        activeStatusFilter={selectedStatus}
+        onSelectStatus={(st) => setSelectedStatus(st)}
+      />
+
       {/* Category Pills Header */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
         {categories.map((cat) => (
