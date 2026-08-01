@@ -58,11 +58,11 @@ export const AddOpportunityModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-8 overflow-hidden">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-4 sm:my-8 overflow-hidden max-h-[92vh] flex flex-col">
         
         {/* Header */}
-        <div className="p-5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold">
               <Plus className="w-4 h-4" />
@@ -73,14 +73,14 @@ export const AddOpportunityModal: React.FC = () => {
           </div>
           <button
             onClick={() => setIsAddOpportunityOpen(false)}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -93,7 +93,7 @@ export const AddOpportunityModal: React.FC = () => {
                 placeholder="E.g. Senwes, AWS, Takealot"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 border rounded-lg"
+                className="w-full p-2.5 sm:p-2 text-sm sm:text-xs bg-slate-50 dark:bg-slate-800 border rounded-lg"
               />
             </div>
 
@@ -107,7 +107,7 @@ export const AddOpportunityModal: React.FC = () => {
                 placeholder="E.g. Graduate Software Engineer"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
-                className="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 border rounded-lg"
+                className="w-full p-2.5 sm:p-2 text-sm sm:text-xs bg-slate-50 dark:bg-slate-800 border rounded-lg"
               />
             </div>
           </div>

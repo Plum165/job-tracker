@@ -121,11 +121,11 @@ export const OpportunityDetailModal: React.FC = () => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-8 overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 my-3 sm:my-8 overflow-hidden max-h-[92vh] flex flex-col">
         
         {/* Header Bar */}
-        <div className="p-6 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4">
+        <div className="p-4 sm:p-6 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-4 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
@@ -135,7 +135,7 @@ export const OpportunityDetailModal: React.FC = () => {
                 {badge.label}
               </span>
             </div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">
               {selectedOpportunity.jobTitle}
             </h2>
             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500">
@@ -149,14 +149,14 @@ export const OpportunityDetailModal: React.FC = () => {
 
           <button
             onClick={() => setSelectedOpportunity(null)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Modal Main Scroll Area */}
-        <div className="p-6 overflow-y-auto flex-1 space-y-6">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
           
           {/* Quick Action Link & Status Panel */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800">
@@ -259,7 +259,7 @@ export const OpportunityDetailModal: React.FC = () => {
                     type="date"
                     value={dateApplied}
                     onChange={(e) => setDateApplied(e.target.value)}
-                    className="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100"
+                    className="w-full p-2.5 sm:p-2 text-sm sm:text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100"
                   />
                 </div>
 
@@ -271,7 +271,7 @@ export const OpportunityDetailModal: React.FC = () => {
                     type="date"
                     value={followUpDate}
                     onChange={(e) => setFollowUpDate(e.target.value)}
-                    className="w-full p-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100"
+                    className="w-full p-2.5 sm:p-2 text-sm sm:text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
@@ -285,7 +285,7 @@ export const OpportunityDetailModal: React.FC = () => {
                   value={personalNotes}
                   onChange={(e) => setPersonalNotes(e.target.value)}
                   placeholder="E.g., Researched digital transformation work. Contacted recruiter on LinkedIn. Need to tailor Java & React projects..."
-                  className="w-full p-3 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full p-3 text-sm sm:text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
             </div>

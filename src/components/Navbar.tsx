@@ -132,30 +132,38 @@ export const Navbar: React.FC = () => {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search opportunities..."
+              placeholder="Search companies, positions, locations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none"
+              className="w-full pl-9 pr-8 py-2 text-sm sm:text-xs bg-slate-800 border border-slate-700 text-white placeholder-slate-400 focus:outline-none rounded-lg"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-semibold p-1 min-h-[32px]"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 
         {/* Tab Navigation Bar */}
-        <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar py-2 border-t border-slate-800">
+        <nav className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-2 border-t border-slate-800 -mx-4 px-4 sm:mx-0 sm:px-0">
           {navItems.map((item) => {
             const isActive = activeTab === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                className={`flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold transition-all shrink-0 cursor-pointer min-h-[44px] rounded-lg ${
                   isActive
-                    ? 'bg-slate-800 text-white border-l-4 border-l-blue-500 border-t border-r border-b border-slate-700'
+                    ? 'bg-slate-800 text-white border-l-4 border-l-blue-500 border border-slate-700 shadow-2xs'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                 }`}
               >
                 {item.icon}
-                <span>{item.label}</span>
+                <span className="whitespace-nowrap">{item.label}</span>
               </button>
             );
           })}

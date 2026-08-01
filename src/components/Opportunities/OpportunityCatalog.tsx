@@ -101,15 +101,15 @@ export const OpportunityCatalog: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-3">
           
           {/* Filter Select Controls */}
-          <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 flex-1 w-full sm:w-auto">
             
             {/* Status Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-              <span className="text-[11px] font-medium text-slate-500">Status:</span>
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 min-h-[40px]">
+              <span className="text-[11px] font-medium text-slate-500 shrink-0">Status:</span>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as ApplicationStatus | 'All')}
-                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+                className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer truncate"
               >
                 {statuses.map((st) => (
                   <option key={st} value={st} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -120,12 +120,12 @@ export const OpportunityCatalog: React.FC = () => {
             </div>
 
             {/* Work Arrangement */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-              <span className="text-[11px] font-medium text-slate-500">Work:</span>
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 min-h-[40px]">
+              <span className="text-[11px] font-medium text-slate-500 shrink-0">Work:</span>
               <select
                 value={selectedWorkArrangement}
                 onChange={(e) => setSelectedWorkArrangement(e.target.value as WorkArrangement | 'All')}
-                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+                className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer truncate"
               >
                 {arrangements.map((wa) => (
                   <option key={wa} value={wa} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -136,12 +136,12 @@ export const OpportunityCatalog: React.FC = () => {
             </div>
 
             {/* Location Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-              <span className="text-[11px] font-medium text-slate-500">Location:</span>
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 min-h-[40px]">
+              <span className="text-[11px] font-medium text-slate-500 shrink-0">Location:</span>
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+                className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer truncate"
               >
                 {availableLocations.map((loc) => (
                   <option key={loc} value={loc} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -152,12 +152,12 @@ export const OpportunityCatalog: React.FC = () => {
             </div>
 
             {/* Priority Filter */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-              <span className="text-[11px] font-medium text-slate-500">Priority:</span>
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 min-h-[40px]">
+              <span className="text-[11px] font-medium text-slate-500 shrink-0">Priority:</span>
               <select
                 value={selectedPriority}
                 onChange={(e) => setSelectedPriority(e.target.value as PriorityLevel | 'All')}
-                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+                className="w-full bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer truncate"
               >
                 {priorities.map((p) => (
                   <option key={p} value={p} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
@@ -168,8 +168,8 @@ export const OpportunityCatalog: React.FC = () => {
             </div>
 
             {/* Sort Order */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
-              <span className="text-[11px] font-medium text-slate-500">Sort by:</span>
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 col-span-2 sm:col-span-1 min-h-[40px]">
+              <span className="text-[11px] font-medium text-slate-500 shrink-0">Sort by:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'closingDate' | 'dateAdded' | 'company' | 'priority')}
