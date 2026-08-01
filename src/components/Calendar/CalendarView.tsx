@@ -32,6 +32,7 @@ interface CalendarEvent {
 
 export const CalendarView: React.FC = () => {
   const {
+    allOpportunities,
     filteredOpportunities,
     privateStates,
     setSelectedOpportunity,
@@ -41,11 +42,16 @@ export const CalendarView: React.FC = () => {
     setSelectedCategory,
     selectedStatus,
     setSelectedStatus,
+    selectedLocation,
+    setSelectedLocation,
     resetFilters,
   } = useWorkspace();
 
   // Mode: 'traditional' (Month Grid) or 'timeline' (Chronological List)
   const [calendarMode, setCalendarMode] = useState<'traditional' | 'timeline'>('traditional');
+  
+  // Toggle to show/hide past events in timeline (default false = hide past events unless asked)
+  const [showPastEvents, setShowPastEvents] = useState<boolean>(false);
 
   // Month navigation state for traditional calendar view
   const [currentDate, setCurrentDate] = useState<Date>(() => new Date());
@@ -69,6 +75,12 @@ export const CalendarView: React.FC = () => {
     'Finance & Fintech',
     'Cybersecurity',
     'Other',
+  ];
+
+  // Dynamic list of unique locations
+  const availableLocations = [
+    'All',
+    ...Array.from(new Set(allOpportunities.map((o) => o.location).filter(Boolean))),
   ];
 
   // Aggregate events from filteredOpportunities (ensures Search & Filter works in Calendar!)
@@ -239,7 +251,7 @@ export const CalendarView: React.FC = () => {
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search calendar events, companies, notes..."
+              placeholder="Search calendar events, companies, locations, notes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-8 py-2 text-xs bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-xl focus:outline-none focus:border-emerald-500"
@@ -255,10 +267,10 @@ export const CalendarView: React.FC = () => {
           </div>
 
           {/* Reset Filters button if any active */}
-          {(searchQuery || selectedCategory !== 'All' || selectedStatus !== 'All') && (
+          {(searchQuery || selectedCategory !== 'All' || selectedStatus !== 'All' || selectedLocation !== 'All') && (
             <button
               onClick={resetFilters}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset Search</span>
@@ -268,7 +280,7 @@ export const CalendarView: React.FC = () => {
 
         {/* Category Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar pt-1">
-          <span className="text-xs font-medium text-slate-400 shrink-0">Filter:</span>
+          <span className="text-xs font-medium text-slate-400 shrink-0">Category:</span>
           {categories.map((cat) => (
             <button
               key={cat}
@@ -280,6 +292,24 @@ export const CalendarView: React.FC = () => {
               }`}
             >
               {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Location Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar pt-1 border-t border-slate-100 dark:border-slate-800/60">
+          <span className="text-xs font-medium text-slate-400 shrink-0">Location:</span>
+          {availableLocations.map((loc) => (
+            <button
+              key={loc}
+              onClick={() => setSelectedLocation(loc)}
+              className={`px-3 py-1 text-[11px] font-semibold whitespace-nowrap rounded-lg transition-all cursor-pointer ${
+                selectedLocation === loc
+                  ? 'bg-emerald-700 text-white font-bold'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              📍 {loc}
             </button>
           ))}
         </div>
@@ -411,69 +441,110 @@ export const CalendarView: React.FC = () => {
       ) : (
         /* CHRONOLOGICAL TIMELINE LIST VIEW */
         <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xs space-y-4">
-          {events.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 italic text-xs">
-              No upcoming deadlines or events matching your criteria.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {events.map((evt) => {
-                const daysLeft = getDaysUntilDeadline(evt.date);
-                const badge = getDeadlineStatusBadge(evt.date);
-                const pState = privateStates[evt.opp.id];
-                const statusStyle = getStatusColorStyle(pState?.status);
+          {/* Timeline Header & Past Events Toggle */}
+          {(() => {
+            const todayMs = new Date().setHours(0, 0, 0, 0);
+            const pastEventsCount = events.filter((e) => new Date(e.date).getTime() < todayMs).length;
+            const timelineEvents = showPastEvents
+              ? events
+              : events.filter((e) => new Date(e.date).getTime() >= todayMs);
 
-                return (
-                  <div
-                    key={evt.id}
-                    onClick={() => setSelectedOpportunity(evt.opp)}
-                    className={`p-4 rounded-xl border ${statusStyle.cardBorder} hover:border-emerald-500 ${statusStyle.cardBg} transition-all cursor-pointer flex items-center justify-between gap-4`}
-                  >
-                    <div className="flex items-center gap-4">
-                      {/* Event Type Icon Badge */}
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-                          evt.type === 'closing'
-                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
-                            : evt.type === 'interview'
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
-                            : 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300'
-                        }`}
-                      >
-                        {evt.type === 'closing' && <AlertTriangle className="w-5 h-5" />}
-                        {evt.type === 'interview' && <Clock className="w-5 h-5" />}
-                        {evt.type === 'followup' && <Flag className="w-5 h-5" />}
-                      </div>
-
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                            {evt.company}
-                          </span>
-                          <span className={`text-[10px] uppercase font-bold px-2 py-0.2 rounded ${statusStyle.badgeBg}`}>
-                            {pState?.status || evt.type}
-                          </span>
-                        </div>
-                        <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                          {evt.title}
-                        </h4>
-                      </div>
-                    </div>
-
-                    {/* Date & Urgency Badge */}
-                    <div className="text-right shrink-0">
-                      <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {formatDateDisplay(evt.date)}
-                      </div>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full border ${badge.badgeClass}`}>
-                        {badge.label}
-                      </span>
-                    </div>
+            return (
+              <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div className="text-xs font-semibold text-slate-500">
+                    Showing <strong className="text-slate-900 dark:text-slate-100">{timelineEvents.length}</strong> {showPastEvents ? 'total' : 'upcoming'} milestone events
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  {pastEventsCount > 0 && (
+                    <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={showPastEvents}
+                        onChange={(e) => setShowPastEvents(e.target.checked)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span>Show Passed Events ({pastEventsCount})</span>
+                    </label>
+                  )}
+                </div>
+
+                {timelineEvents.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400 italic text-xs space-y-2">
+                    <p>No upcoming deadlines or events matching your criteria.</p>
+                    {pastEventsCount > 0 && !showPastEvents && (
+                      <button
+                        onClick={() => setShowPastEvents(true)}
+                        className="text-xs text-emerald-600 font-bold hover:underline"
+                      >
+                        Show {pastEventsCount} passed events
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {timelineEvents.map((evt) => {
+                      const daysLeft = getDaysUntilDeadline(evt.date);
+                      const badge = getDeadlineStatusBadge(evt.date);
+                      const pState = privateStates[evt.opp.id];
+                      const statusStyle = getStatusColorStyle(pState?.status);
+                      const isPast = new Date(evt.date).getTime() < todayMs;
+
+                      return (
+                        <div
+                          key={evt.id}
+                          onClick={() => setSelectedOpportunity(evt.opp)}
+                          className={`p-4 rounded-xl border ${statusStyle.cardBorder} hover:border-emerald-500 ${
+                            isPast ? 'opacity-60 bg-slate-50/70 dark:bg-slate-950/40' : statusStyle.cardBg
+                          } transition-all cursor-pointer flex items-center justify-between gap-4`}
+                        >
+                          <div className="flex items-center gap-4">
+                            {/* Event Type Icon Badge */}
+                            <div
+                              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+                                evt.type === 'closing'
+                                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300'
+                                  : evt.type === 'interview'
+                                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                                  : 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300'
+                              }`}
+                            >
+                              {evt.type === 'closing' && <AlertTriangle className="w-5 h-5" />}
+                              {evt.type === 'interview' && <Clock className="w-5 h-5" />}
+                              {evt.type === 'followup' && <Flag className="w-5 h-5" />}
+                            </div>
+
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                                  {evt.company}
+                                </span>
+                                <span className={`text-[10px] uppercase font-bold px-2 py-0.2 rounded ${statusStyle.badgeBg}`}>
+                                  {pState?.status || evt.type}
+                                </span>
+                              </div>
+                              <h4 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                {evt.title}
+                              </h4>
+                            </div>
+                          </div>
+
+                          {/* Date & Urgency Badge */}
+                          <div className="text-right shrink-0">
+                            <div className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                              {formatDateDisplay(evt.date)}
+                            </div>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${badge.badgeClass}`}>
+                              {badge.label}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
     </div>

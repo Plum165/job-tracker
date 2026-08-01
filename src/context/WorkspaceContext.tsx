@@ -41,6 +41,8 @@ interface WorkspaceContextType {
   setSelectedStatus: (status: ApplicationStatus | 'All') => void;
   selectedWorkArrangement: WorkArrangement | 'All';
   setSelectedWorkArrangement: (wa: WorkArrangement | 'All') => void;
+  selectedLocation: string | 'All';
+  setSelectedLocation: (loc: string | 'All') => void;
   selectedPriority: PriorityLevel | 'All';
   setSelectedPriority: (priority: PriorityLevel | 'All') => void;
   selectedTag: string | null;
@@ -95,6 +97,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedCategory, setSelectedCategory] = useState<JobCategory | 'All'>('All');
   const [selectedStatus, setSelectedStatus] = useState<ApplicationStatus | 'All'>('All');
   const [selectedWorkArrangement, setSelectedWorkArrangement] = useState<WorkArrangement | 'All'>('All');
+  const [selectedLocation, setSelectedLocation] = useState<string | 'All'>('All');
   const [selectedPriority, setSelectedPriority] = useState<PriorityLevel | 'All'>('All');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'closingDate' | 'dateAdded' | 'company' | 'priority'>('closingDate');
@@ -146,9 +149,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const matchComp = opp.companyName.toLowerCase().includes(query);
         const matchTitle = opp.jobTitle.toLowerCase().includes(query);
         const matchDesc = opp.companyDescription.toLowerCase().includes(query);
+        const matchLocation = opp.location.toLowerCase().includes(query);
         const matchTag = opp.tags.some((t) => t.toLowerCase().includes(query));
         const matchNotes = pState.personalNotes?.toLowerCase().includes(query);
-        if (!matchComp && !matchTitle && !matchDesc && !matchTag && !matchNotes) {
+        if (!matchComp && !matchTitle && !matchDesc && !matchLocation && !matchTag && !matchNotes) {
           return false;
         }
       }
@@ -159,13 +163,38 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       // Status filter
-      if (selectedStatus !== 'All' && pState.status !== selectedStatus) {
-        return false;
+      if (selectedStatus !== 'All') {
+        if (selectedStatus === ApplicationStatus.CLOSED) {
+          // Closed includes explicitly CLOSED, REJECTED, or past closing deadline
+          const isPast = new Date(opp.closingDate).getTime() < new Date().setHours(0, 0, 0, 0);
+          if (
+            pState.status !== ApplicationStatus.CLOSED &&
+            pState.status !== ApplicationStatus.REJECTED &&
+            !isPast
+          ) {
+            return false;
+          }
+        } else if (selectedStatus === ApplicationStatus.REJECTED) {
+          if (pState.status !== ApplicationStatus.REJECTED) {
+            return false;
+          }
+        } else {
+          if (pState.status !== selectedStatus) {
+            return false;
+          }
+        }
       }
 
       // Work arrangement
       if (selectedWorkArrangement !== 'All' && opp.workArrangement !== selectedWorkArrangement) {
         return false;
+      }
+
+      // Location filter
+      if (selectedLocation !== 'All') {
+        if (!opp.location.toLowerCase().includes(selectedLocation.toLowerCase())) {
+          return false;
+        }
       }
 
       // Priority
@@ -185,7 +214,29 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const pB = privateStates[b.id] || WorkspaceStorage.getPrivateState(b.id);
 
       if (sortBy === 'closingDate') {
-        return new Date(a.closingDate).getTime() - new Date(b.closingDate).getTime();
+        const todayMs = new Date().setHours(0, 0, 0, 0);
+        const timeA = new Date(a.closingDate).getTime();
+        const timeB = new Date(b.closingDate).getTime();
+
+        const isAInactive =
+          timeA < todayMs ||
+          [ApplicationStatus.REJECTED, ApplicationStatus.CLOSED, ApplicationStatus.WITHDRAWN].includes(
+            pA.status
+          );
+        const isBInactive =
+          timeB < todayMs ||
+          [ApplicationStatus.REJECTED, ApplicationStatus.CLOSED, ApplicationStatus.WITHDRAWN].includes(
+            pB.status
+          );
+
+        // Put active upcoming deadlines at top, closed/past/rejected at bottom
+        if (!isAInactive && isBInactive) return -1;
+        if (isAInactive && !isBInactive) return 1;
+
+        if (!isAInactive && !isBInactive) {
+          return timeA - timeB; // Soonest active deadline first
+        }
+        return timeB - timeA; // Most recently closed/past deadline first at bottom
       }
       if (sortBy === 'dateAdded') {
         return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
@@ -205,6 +256,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setSelectedCategory('All');
     setSelectedStatus('All');
     setSelectedWorkArrangement('All');
+    setSelectedLocation('All');
     setSelectedPriority('All');
     setSelectedTag(null);
     setSortBy('closingDate');
@@ -369,6 +421,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSelectedStatus,
         selectedWorkArrangement,
         setSelectedWorkArrangement,
+        selectedLocation,
+        setSelectedLocation,
         selectedPriority,
         setSelectedPriority,
         selectedTag,

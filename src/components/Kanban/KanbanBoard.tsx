@@ -17,6 +17,7 @@ import {
 
 export const KanbanBoard: React.FC = () => {
   const {
+    allOpportunities,
     filteredOpportunities,
     getPrivateState,
     updateStatus,
@@ -27,6 +28,8 @@ export const KanbanBoard: React.FC = () => {
     setSelectedCategory,
     selectedStatus,
     setSelectedStatus,
+    selectedLocation,
+    setSelectedLocation,
     resetFilters,
   } = useWorkspace();
 
@@ -43,6 +46,11 @@ export const KanbanBoard: React.FC = () => {
     'Finance & Fintech',
     'Cybersecurity',
     'Other',
+  ];
+
+  const availableLocations = [
+    'All',
+    ...Array.from(new Set(allOpportunities.map((o) => o.location).filter(Boolean))),
   ];
 
   return (
@@ -79,7 +87,7 @@ export const KanbanBoard: React.FC = () => {
               </button>
             )}
           </div>
-          {(searchQuery || selectedCategory !== 'All' || selectedStatus !== 'All') && (
+          {(searchQuery || selectedCategory !== 'All' || selectedStatus !== 'All' || selectedLocation !== 'All') && (
             <button
               onClick={resetFilters}
               className="p-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg border border-rose-200 dark:border-rose-800 text-xs flex items-center gap-1 shrink-0 cursor-pointer"
@@ -112,6 +120,24 @@ export const KanbanBoard: React.FC = () => {
             }`}
           >
             {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Location Pills Header */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <span className="text-xs font-semibold text-slate-500 shrink-0">Location:</span>
+        {availableLocations.map((loc) => (
+          <button
+            key={loc}
+            onClick={() => setSelectedLocation(loc)}
+            className={`px-3 py-1 text-xs font-semibold whitespace-nowrap transition-all rounded-lg cursor-pointer ${
+              selectedLocation === loc
+                ? 'bg-emerald-600 text-white font-bold shadow-2xs'
+                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }`}
+          >
+            📍 {loc}
           </button>
         ))}
       </div>

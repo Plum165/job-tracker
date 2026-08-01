@@ -16,6 +16,7 @@ import {
 
 export const OpportunityCatalog: React.FC = () => {
   const {
+    allOpportunities,
     filteredOpportunities,
     catalogViewMode,
     setCatalogViewMode,
@@ -27,6 +28,8 @@ export const OpportunityCatalog: React.FC = () => {
     setSelectedStatus,
     selectedWorkArrangement,
     setSelectedWorkArrangement,
+    selectedLocation,
+    setSelectedLocation,
     selectedPriority,
     setSelectedPriority,
     selectedTag,
@@ -54,11 +57,17 @@ export const OpportunityCatalog: React.FC = () => {
 
   const priorities: (PriorityLevel | 'All')[] = ['All', 'High', 'Medium', 'Low'];
 
+  const availableLocations = [
+    'All',
+    ...Array.from(new Set(allOpportunities.map((o) => o.location).filter(Boolean))),
+  ];
+
   const hasActiveFilters =
     searchQuery !== '' ||
     selectedCategory !== 'All' ||
     selectedStatus !== 'All' ||
     selectedWorkArrangement !== 'All' ||
+    selectedLocation !== 'All' ||
     selectedPriority !== 'All' ||
     selectedTag !== null;
 
@@ -121,6 +130,22 @@ export const OpportunityCatalog: React.FC = () => {
                 {arrangements.map((wa) => (
                   <option key={wa} value={wa} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
                     {wa}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Location Filter */}
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+              <span className="text-[11px] font-medium text-slate-500">Location:</span>
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="bg-transparent text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none cursor-pointer"
+              >
+                {availableLocations.map((loc) => (
+                  <option key={loc} value={loc} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100">
+                    {loc}
                   </option>
                 ))}
               </select>
