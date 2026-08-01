@@ -79,10 +79,6 @@ export const DashboardView: React.FC = () => {
       {/* Welcome Banner */}
       <div className="relative overflow-hidden bg-slate-900 text-white p-6 sm:p-8 border border-slate-800 shadow-md">
         <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-800 text-blue-400 text-xs font-bold uppercase tracking-widest border border-slate-700">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Shared Catalog • Private Local Storage</span>
-          </div>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
             Application Dashboard
           </h2>

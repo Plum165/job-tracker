@@ -61,13 +61,7 @@ export const Navbar: React.FC = () => {
                 <h1 className="text-base font-bold text-white tracking-tight">
                   Opportunity Hub
                 </h1>
-                <span className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 bg-slate-800 text-blue-400 border border-slate-700">
-                  Zero Backend
-                </span>
               </div>
-              <p className="text-[11px] text-slate-400 uppercase tracking-wider hidden sm:block">
-                Shared Company Catalog • Private Local Workspace
-              </p>
             </div>
           </div>
 

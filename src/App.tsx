@@ -58,11 +58,7 @@ export default function App() {
             </div>
 
             <div className="flex items-center gap-4 text-[11px] uppercase tracking-wider">
-              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Local Cache Synchronized
-              </span>
-              <span className="text-slate-500">System v4.2.1-Stable | React / TS Architecture</span>
+              <span className="text-slate-500">Private Local Workspace</span>
             </div>
           </div>
         </footer>

@@ -3,6 +3,7 @@ export type JobCategory =
   | 'Data Science'
   | 'Graduate Programme'
   | 'Internship'
+  | 'Vacation Work'
   | 'Product & Design'
   | 'Finance & Fintech'
   | 'Cybersecurity'

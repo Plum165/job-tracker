@@ -1,3 +1,4 @@
+import { DEFAULT_INITIAL_PRIVATE_STATES } from '../data/defaultCatalog';
 import {
   ApplicationStatus,
   Contact,
@@ -82,7 +83,14 @@ export const WorkspaceStorage = {
     if (all[opportunityId]) {
       return all[opportunityId];
     }
-    return createDefaultApplicationState(opportunityId);
+    const defaultState = createDefaultApplicationState(opportunityId);
+    if (DEFAULT_INITIAL_PRIVATE_STATES[opportunityId]) {
+      return {
+        ...defaultState,
+        ...DEFAULT_INITIAL_PRIVATE_STATES[opportunityId],
+      };
+    }
+    return defaultState;
   },
 
   savePrivateState(state: UserApplicationState): void {
