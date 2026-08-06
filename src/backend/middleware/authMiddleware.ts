@@ -1,8 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { AccessTokenPayload, UserRole } from '../types/auth';
-
-const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET || 'enterprise_access_token_secret_key_32_chars_min';
+import { envConfig } from '../config/envConfig';
 
 export interface AuthenticatedRequest extends Request {
   user?: AccessTokenPayload;
@@ -21,18 +20,24 @@ export function authenticateToken(
 
   if (!token) {
     res.status(401).json({
+      success: false,
       error: 'Unauthorized',
-      message: 'Access token missing or invalid format (Bearer <token>)',
+      code: 'MISSING_TOKEN',
+      message: 'Access token missing or invalid format. Header format must be: Bearer <token>',
+      timestamp: new Date().toISOString(),
     });
     return;
   }
 
   try {
-    const payload = jwt.verify(token, ACCESS_TOKEN_SECRET) as AccessTokenPayload;
+    const payload = jwt.verify(token, envConfig.JWT_ACCESS_SECRET) as AccessTokenPayload;
     if (payload.tokenType !== 'access') {
       res.status(401).json({
+        success: false,
         error: 'Unauthorized',
-        message: 'Invalid token type provided for resource authorization',
+        code: 'INVALID_TOKEN_TYPE',
+        message: 'Invalid token type provided for resource authorization. Access token required.',
+        timestamp: new Date().toISOString(),
       });
       return;
     }
@@ -40,9 +45,35 @@ export function authenticateToken(
     req.user = payload;
     next();
   } catch (err: any) {
+    if (err.name === 'TokenExpiredError') {
+      res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        code: 'TOKEN_EXPIRED',
+        message: 'Access token has expired. Please refresh your token.',
+        expiredAt: err.expiredAt,
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
+    if (err.name === 'JsonWebTokenError') {
+      res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        code: 'INVALID_SIGNATURE',
+        message: 'Invalid JWT access token signature or corrupted payload structure.',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     res.status(401).json({
+      success: false,
       error: 'Unauthorized',
-      message: err.name === 'TokenExpiredError' ? 'Access token expired' : 'Invalid access token',
+      code: 'AUTHENTICATION_FAILED',
+      message: 'Failed to verify authorization token.',
+      timestamp: new Date().toISOString(),
     });
   }
 }
@@ -53,14 +84,23 @@ export function authenticateToken(
 export function authorizeRoles(...roles: UserRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      res.status(401).json({ error: 'Unauthorized', message: 'User not authenticated' });
+      res.status(401).json({
+        success: false,
+        error: 'Unauthorized',
+        code: 'NOT_AUTHENTICATED',
+        message: 'User authentication required prior to permission check.',
+        timestamp: new Date().toISOString(),
+      });
       return;
     }
 
     if (!roles.includes(req.user.role)) {
       res.status(403).json({
+        success: false,
         error: 'Forbidden',
-        message: `Role '${req.user.role}' does not have permission to access this resource`,
+        code: 'INSUFFICIENT_PERMISSIONS',
+        message: `Role '${req.user.role}' lacks permission to access this resource. Required: [${roles.join(', ')}]`,
+        timestamp: new Date().toISOString(),
       });
       return;
     }

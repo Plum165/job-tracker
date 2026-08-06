@@ -3,6 +3,8 @@ import bcrypt from 'bcryptjs';
 import { detectIdentifierType } from '../utils/identifierDetector';
 import { userRepository } from '../repository/userRepository';
 import { tokenRepository } from '../repository/tokenRepository';
+import { envConfig } from '../config/envConfig';
+import { AppError } from '../middleware/errorHandler';
 import {
   AccessTokenPayload,
   AuthSuccessResponse,
@@ -12,9 +14,6 @@ import {
   SignupDTO,
   User,
 } from '../types/auth';
-
-const ACCESS_TOKEN_SECRET = process.env.JWT_ACCESS_SECRET || 'enterprise_access_token_secret_key_32_chars_min';
-const REFRESH_TOKEN_SECRET = process.env.JWT_REFRESH_SECRET || 'enterprise_refresh_token_secret_key_32_chars_min';
 
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
 const ACCESS_TOKEN_EXPIRY_SECONDS = 15 * 60;
@@ -126,31 +125,40 @@ export class AuthService {
 
     let payload: RefreshTokenPayload;
     try {
-      payload = jwt.verify(refreshTokenStr, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
-    } catch {
-      throw new Error('Invalid or expired refresh token');
+      payload = jwt.verify(refreshTokenStr, envConfig.JWT_REFRESH_SECRET) as RefreshTokenPayload;
+    } catch (err: any) {
+      if (err.name === 'TokenExpiredError') {
+        throw new AppError('Refresh token expired. Please log in again.', 401);
+      }
+      if (err.name === 'JsonWebTokenError') {
+        throw new AppError('Invalid refresh token signature or structure.', 401);
+      }
+      throw new AppError('Invalid refresh token.', 401);
     }
 
     if (payload.tokenType !== 'refresh' || !payload.tokenId) {
-      throw new Error('Invalid refresh token payload');
+      throw new AppError('Invalid refresh token payload.', 401);
     }
 
     // Check token record in revocation repository
     const tokenRecord = await tokenRepository.findTokenById(payload.tokenId);
     if (!tokenRecord) {
-      throw new Error('Refresh token not found');
+      throw new AppError('Refresh token session not found or revoked.', 401);
     }
 
     // REPLAY ATTACK DETECTION
     if (tokenRecord.isRevoked) {
       // Replay attack detected! Revoke all tokens for this user for security
       await tokenRepository.revokeAllUserTokens(tokenRecord.userId);
-      throw new Error('Security alert: Revoked refresh token reused. Session invalidated.');
+      throw new AppError('Security Alert: Revoked token reuse detected. All active sessions invalidated.', 401, {
+        securityEvent: 'REPLAY_ATTACK_DETECTED',
+        userId: tokenRecord.userId,
+      });
     }
 
     const user = await userRepository.findById(payload.userId);
     if (!user) {
-      throw new Error('User no longer exists');
+      throw new AppError('Associated user account no longer exists.', 401);
     }
 
     // Generate new token pair
@@ -175,7 +183,7 @@ export class AuthService {
   async logout(refreshTokenStr: string): Promise<void> {
     if (!refreshTokenStr) return;
     try {
-      const payload = jwt.verify(refreshTokenStr, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
+      const payload = jwt.verify(refreshTokenStr, envConfig.JWT_REFRESH_SECRET) as RefreshTokenPayload;
       if (payload?.tokenId) {
         await tokenRepository.revokeToken(payload.tokenId);
       }
@@ -201,7 +209,7 @@ export class AuthService {
       tokenType: 'access',
     };
 
-    const accessToken = jwt.sign(accessPayload, ACCESS_TOKEN_SECRET, {
+    const accessToken = jwt.sign(accessPayload, envConfig.JWT_ACCESS_SECRET, {
       expiresIn: ACCESS_TOKEN_EXPIRY,
     });
 
@@ -212,7 +220,7 @@ export class AuthService {
       tokenType: 'refresh',
     };
 
-    const refreshToken = jwt.sign(refreshPayload, REFRESH_TOKEN_SECRET, {
+    const refreshToken = jwt.sign(refreshPayload, envConfig.JWT_REFRESH_SECRET, {
       expiresIn: `${REFRESH_TOKEN_EXPIRY_DAYS}d`,
     });
 

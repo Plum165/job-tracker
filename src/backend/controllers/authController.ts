@@ -1,8 +1,10 @@
-import { Router, Response } from 'express';
+import { Router, Response, NextFunction } from 'express';
 import { authService } from '../services/authService';
 import { authenticateToken, AuthenticatedRequest } from '../middleware/authMiddleware';
 import { userRepository } from '../repository/userRepository';
 import { tokenRepository } from '../repository/tokenRepository';
+import { validateRequest } from '../middleware/validateRequest';
+import { loginSchema, signupSchema, refreshTokenSchema, logoutSchema } from '../schemas/authSchemas';
 
 const router = Router();
 
@@ -10,7 +12,7 @@ const router = Router();
  * POST /api/auth/login
  * Multi-Identifier login (Email, Student ID, Employee ID, Username)
  */
-router.post('/login', async (req, res) => {
+router.post('/login', validateRequest(loginSchema), async (req, res, next: NextFunction) => {
   try {
     const { identifier, password } = req.body;
     const ipAddress = req.ip || req.socket.remoteAddress;
@@ -22,20 +24,17 @@ router.post('/login', async (req, res) => {
       success: true,
       data: result,
       message: `Successfully authenticated using ${result.detectedIdentifierType} identifier`,
+      timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
-    res.status(400).json({
-      success: false,
-      error: 'Authentication failed',
-      message: err.message || 'Invalid credentials',
-    });
+  } catch (err) {
+    next(err);
   }
 });
 
 /**
  * POST /api/auth/signup
  */
-router.post('/signup', async (req, res) => {
+router.post('/signup', validateRequest(signupSchema), async (req, res, next: NextFunction) => {
   try {
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
@@ -46,21 +45,18 @@ router.post('/signup', async (req, res) => {
       success: true,
       data: result,
       message: 'Account created successfully',
+      timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
-    res.status(400).json({
-      success: false,
-      error: 'Signup failed',
-      message: err.message || 'Could not register user',
-    });
+  } catch (err) {
+    next(err);
   }
 });
 
 /**
  * POST /api/auth/refresh
- * Refresh token rotation with revocation tracking
+ * Refresh token rotation with revocation tracking & replay detection
  */
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', validateRequest(refreshTokenSchema), async (req, res, next: NextFunction) => {
   try {
     const { refreshToken } = req.body;
     const ipAddress = req.ip || req.socket.remoteAddress;
@@ -72,20 +68,17 @@ router.post('/refresh', async (req, res) => {
       success: true,
       data: result,
       message: 'Tokens rotated successfully',
+      timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
-    res.status(401).json({
-      success: false,
-      error: 'Token refresh failed',
-      message: err.message || 'Invalid or revoked refresh token',
-    });
+  } catch (err) {
+    next(err);
   }
 });
 
 /**
  * POST /api/auth/logout
  */
-router.post('/logout', async (req, res) => {
+router.post('/logout', validateRequest(logoutSchema), async (req, res, next: NextFunction) => {
   try {
     const { refreshToken } = req.body;
     if (refreshToken) {
@@ -94,12 +87,10 @@ router.post('/logout', async (req, res) => {
     res.status(200).json({
       success: true,
       message: 'Logged out successfully',
+      timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
-    res.status(200).json({
-      success: true,
-      message: 'Session cleared',
-    });
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -107,16 +98,16 @@ router.post('/logout', async (req, res) => {
  * GET /api/auth/me
  * Protected user profile route
  */
-router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) {
-      res.status(401).json({ error: 'Not authenticated' });
+      res.status(401).json({ success: false, error: 'Unauthorized', message: 'Not authenticated' });
       return;
     }
 
     const user = await userRepository.findById(req.user.userId);
     if (!user) {
-      res.status(444).json({ error: 'User not found' });
+      res.status(404).json({ success: false, error: 'Not Found', message: 'User profile not found' });
       return;
     }
 
@@ -128,9 +119,10 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
         user: userWithoutPassword,
         tokenClaims: req.user,
       },
+      timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to fetch user profile' });
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -138,7 +130,7 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
  * GET /api/auth/active-sessions
  * Protected route to inspect active sessions
  */
-router.get('/active-sessions', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/active-sessions', authenticateToken, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) return;
     const sessions = await tokenRepository.getActiveSessions(req.user.userId);
@@ -152,26 +144,28 @@ router.get('/active-sessions', authenticateToken, async (req: AuthenticatedReque
         ipAddress: s.ipAddress,
         userAgent: s.userAgent,
       })),
+      timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to fetch active sessions' });
+  } catch (err) {
+    next(err);
   }
 });
 
 /**
  * POST /api/auth/revoke-all
- * Emergency logout all sessions
+ * Emergency logout all active sessions
  */
-router.post('/revoke-all', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/revoke-all', authenticateToken, async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) return;
     await tokenRepository.revokeAllUserTokens(req.user.userId);
     res.status(200).json({
       success: true,
       message: 'All active refresh tokens revoked for user',
+      timestamp: new Date().toISOString(),
     });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to revoke sessions' });
+  } catch (err) {
+    next(err);
   }
 });
 
