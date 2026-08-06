@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ActiveTab, useWorkspace } from '../context/WorkspaceContext';
+import { useAuth } from '../context/AuthContext';
 import {
   Briefcase,
   Calendar,
@@ -11,6 +12,7 @@ import {
   Menu,
   Plus,
   Search,
+  ShieldCheck,
   Users,
   X,
 } from 'lucide-react';
@@ -26,6 +28,8 @@ export const Navbar: React.FC = () => {
     setIsAddOpportunityOpen,
     exportToExcel,
   } = useWorkspace();
+
+  const { user, isAuthenticated } = useAuth();
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -48,6 +52,7 @@ export const Navbar: React.FC = () => {
     { id: 'calendar', label: 'Calendar & Deadlines', icon: <Calendar className="w-4 h-4" /> },
     { id: 'contacts', label: 'Contacts Network', icon: <Users className="w-4 h-4" /> },
     { id: 'data', label: 'Data & Imports', icon: <FileSpreadsheet className="w-4 h-4" /> },
+    { id: 'auth', label: 'Auth & JWT Engine', icon: <ShieldCheck className="w-4 h-4 text-blue-400" /> },
   ];
 
   const handleSelectTab = (tabId: ActiveTab) => {

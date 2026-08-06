@@ -14,7 +14,7 @@ import {
   WorkArrangement,
 } from '../types';
 
-export type ActiveTab = 'dashboard' | 'catalog' | 'kanban' | 'calendar' | 'contacts' | 'data';
+export type ActiveTab = 'dashboard' | 'catalog' | 'kanban' | 'calendar' | 'contacts' | 'data' | 'auth';
 
 export interface ToastMessage {
   id: string;

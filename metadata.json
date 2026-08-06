@@ -1,6 +1,6 @@
 {
   "name": "Opportunity Hub - Shared Jobs & Private Application Tracker",
-  "description": "A shared company & job opportunity catalog paired with zero-backend, client-side private application tracking, local contact manager, deadline alerts, Excel/CSV import, and JSON data backup.",
+  "description": "A shared company & job opportunity catalog paired with client-side private application tracking, local contact manager, deadline alerts, Excel/CSV import, and enterprise full-stack multi-identifier dual-token JWT authentication system.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
