@@ -9,9 +9,10 @@ import { AddOpportunityModal } from './components/Opportunities/AddOpportunityMo
 import { OpportunityCatalog } from './components/Opportunities/OpportunityCatalog';
 import { OpportunityDetailModal } from './components/Opportunities/OpportunityDetailModal';
 import { EnterpriseAuthView } from './components/Auth/EnterpriseAuthView';
+import { AuthPage } from './components/Auth/AuthPage';
 import { ToastContainer } from './components/UI/ToastContainer';
 import { useWorkspace, WorkspaceProvider } from './context/WorkspaceContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { Briefcase, ShieldCheck } from 'lucide-react';
 
 const MainContent: React.FC = () => {
@@ -30,43 +31,68 @@ const MainContent: React.FC = () => {
   );
 };
 
+const AppShell: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center font-sans">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Authenticating Session...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+      <div>
+        {/* Top Sticky Navigation */}
+        <Navbar />
+
+        {/* Main View Area */}
+        <MainContent />
+      </div>
+
+      {/* Global Modals & Alerts */}
+      <OpportunityDetailModal />
+      <AddOpportunityModal />
+      <ToastContainer />
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white border-t border-slate-800 py-6 mt-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-600 text-white flex items-center justify-center font-bold text-xs border border-blue-500">
+              <Briefcase className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-bold text-white uppercase tracking-wider">
+              Opportunity Hub
+            </span>
+            <span className="text-[11px] uppercase tracking-wider text-slate-500">— Shared Catalog & Full-Stack Auth Workspace</span>
+          </div>
+
+          <div className="flex items-center gap-4 text-[11px] uppercase tracking-wider">
+            <span className="text-slate-500">Enterprise Dual-Token JWT Guard</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
 export default function App() {
   return (
     <AuthProvider>
       <WorkspaceProvider>
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
-          <div>
-            {/* Top Sticky Navigation */}
-            <Navbar />
-
-            {/* Main View Area */}
-            <MainContent />
-          </div>
-
-          {/* Global Modals & Alerts */}
-          <OpportunityDetailModal />
-          <AddOpportunityModal />
-          <ToastContainer />
-
-          {/* Footer */}
-          <footer className="bg-slate-900 text-white border-t border-slate-800 py-6 mt-12">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-blue-600 text-white flex items-center justify-center font-bold text-xs border border-blue-500">
-                  <Briefcase className="w-3.5 h-3.5" />
-                </div>
-                <span className="font-bold text-white uppercase tracking-wider">
-                  Opportunity Hub
-                </span>
-                <span className="text-[11px] uppercase tracking-wider text-slate-500">— Shared Catalog & Full-Stack Auth Workspace</span>
-              </div>
-
-              <div className="flex items-center gap-4 text-[11px] uppercase tracking-wider">
-                <span className="text-slate-500">Enterprise Dual-Token JWT Guard</span>
-              </div>
-            </div>
-          </footer>
-        </div>
+        <AppShell />
       </WorkspaceProvider>
     </AuthProvider>
   );

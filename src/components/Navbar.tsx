@@ -9,10 +9,12 @@ import {
   FileSpreadsheet,
   Kanban,
   LayoutDashboard,
+  LogOut,
   Menu,
   Plus,
   Search,
   ShieldCheck,
+  User,
   Users,
   X,
 } from 'lucide-react';
@@ -29,7 +31,7 @@ export const Navbar: React.FC = () => {
     exportToExcel,
   } = useWorkspace();
 
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -136,6 +138,34 @@ export const Navbar: React.FC = () => {
                 <Download className="w-3.5 h-3.5" />
                 <span>Export</span>
               </button>
+
+              {/* User Profile Badge & Logout Button */}
+              {user && (
+                <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+                  <div className="hidden md:flex items-center gap-2 px-2.5 py-1 bg-slate-800/80 border border-slate-700/80 rounded-lg text-xs">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[11px]">
+                      {user.username.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div className="text-left leading-tight">
+                      <div className="font-bold text-white text-[11px] truncate max-w-[100px]">
+                        {user.username}
+                      </div>
+                      <div className="text-[9px] text-blue-400 uppercase font-extrabold">
+                        {user.role}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={logout}
+                    title="Sign Out"
+                    className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors border border-slate-800 hover:border-rose-900/50 flex items-center gap-1.5 text-xs font-semibold cursor-pointer rounded-lg min-h-[36px]"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden xl:inline text-[11px]">Sign Out</span>
+                  </button>
+                </div>
+              )}
 
               {/* Add Opportunity Button */}
               <button

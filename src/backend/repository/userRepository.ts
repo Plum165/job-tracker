@@ -10,8 +10,20 @@ class UserRepository {
 
   private async seedDefaultUsers() {
     const passwordHash = await bcrypt.hash('Password123!', 10);
+    const demoPasswordHash = await bcrypt.hash('1234', 10);
 
     const demoUsers: User[] = [
+      {
+        id: 'usr-smsmoe006',
+        email: 'smsmoe006@enterprise.io',
+        username: 'SMSMOE006',
+        studentId: 'STU006',
+        employeeId: 'EMP006',
+        fullName: 'SMSMOE006 (Demo Lead)',
+        role: 'ADMIN',
+        passwordHash: demoPasswordHash,
+        createdAt: new Date().toISOString(),
+      },
       {
         id: 'usr-1',
         email: 'architect@enterprise.io',
