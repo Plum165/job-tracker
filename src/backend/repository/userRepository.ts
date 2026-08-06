@@ -243,9 +243,67 @@ class UserRepository {
     }
   }
 
+  async updateUser(userId: string, data: Partial<User>): Promise<User> {
+    const existing = await this.findById(userId);
+    if (!existing) {
+      throw new Error(`User with ID '${userId}' not found`);
+    }
+
+    const updatedUser: User = {
+      ...existing,
+      ...data,
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.inMemoryFallbackUsers.set(userId, updatedUser);
+
+    try {
+      const dbUpdated = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          fullName: data.fullName !== undefined ? data.fullName : undefined,
+          username: data.username !== undefined ? data.username : undefined,
+          email: data.email !== undefined ? data.email : undefined,
+          avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : undefined,
+          bio: data.bio !== undefined ? data.bio : undefined,
+          preferences: data.preferences !== undefined ? data.preferences : undefined,
+          role: data.role !== undefined ? (data.role as Role) : undefined,
+          passwordHash: data.passwordHash !== undefined ? data.passwordHash : undefined,
+        },
+      });
+      return this.mapPrismaUserToAuthUser(dbUpdated);
+    } catch (err) {
+      return updatedUser;
+    }
+  }
+
+  async updatePassword(userId: string, newPasswordHash: string): Promise<User> {
+    return this.updateUser(userId, { passwordHash: newPasswordHash });
+  }
+
+  async updateRole(userId: string, newRole: UserRole): Promise<User> {
+    return this.updateUser(userId, { role: newRole });
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    this.inMemoryFallbackUsers.delete(userId);
+
+    try {
+      await prisma.user.delete({
+        where: { id: userId },
+      });
+    } catch (err) {
+      // Bypassed or already deleted
+    }
+
+    return true;
+  }
+
   async getAllUsers(): Promise<Omit<User, 'passwordHash'>[]> {
     try {
-      const users = await prisma.user.findMany();
+      const users = await prisma.user.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
       if (users.length > 0) {
         return users.map((u) => {
           const mapped = this.mapPrismaUserToAuthUser(u);
@@ -268,9 +326,13 @@ class UserRepository {
       studentId: u.studentId || undefined,
       employeeId: u.employeeId || undefined,
       fullName: u.fullName,
+      avatarUrl: u.avatarUrl || undefined,
+      bio: u.bio || undefined,
+      preferences: u.preferences || '{}',
       role: u.role as UserRole,
       passwordHash: u.passwordHash,
       createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : String(u.createdAt),
+      updatedAt: u.updatedAt ? (u.updatedAt instanceof Date ? u.updatedAt.toISOString() : String(u.updatedAt)) : undefined,
     };
   }
 }

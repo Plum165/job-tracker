@@ -9,9 +9,13 @@ export interface User {
   studentId?: string;
   employeeId?: string;
   fullName: string;
+  avatarUrl?: string;
+  bio?: string;
+  preferences?: string;
   role: UserRole;
   passwordHash: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface AccessTokenPayload {

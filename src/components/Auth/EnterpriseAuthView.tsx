@@ -21,6 +21,7 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 import { IdentifierType } from '../../backend/types/auth';
+import { UserProfileView } from './UserProfileView';
 
 export const EnterpriseAuthView: React.FC = () => {
   const {
@@ -38,6 +39,7 @@ export const EnterpriseAuthView: React.FC = () => {
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>('login');
+  const [authSectionView, setAuthSectionView] = useState<'profile' | 'inspector'>('profile');
   
   // Login Form state
   const [identifier, setIdentifier] = useState('architect@enterprise.io');
@@ -488,7 +490,34 @@ export const EnterpriseAuthView: React.FC = () => {
             {/* Authenticated User Status */}
             {isAuthenticated && user ? (
               <div className="space-y-4">
-                
+                {/* Mode Selector Header */}
+                <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <button
+                    onClick={() => setAuthSectionView('profile')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      authSectionView === 'profile'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    User Profile & Account Controls
+                  </button>
+                  <button
+                    onClick={() => setAuthSectionView('inspector')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      authSectionView === 'inspector'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    }`}
+                  >
+                    JWT Tokens & Session Inspector
+                  </button>
+                </div>
+
+                {authSectionView === 'profile' ? (
+                  <UserProfileView />
+                ) : (
+                  <>
                 {/* User Identity Card */}
                 <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -629,7 +658,9 @@ export const EnterpriseAuthView: React.FC = () => {
                     </div>
                   </div>
                 )}
-              </div>
+              </>
+            )}
+          </div>
             ) : (
               <div className="p-8 text-center space-y-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
                 <div className="w-12 h-12 mx-auto rounded-2xl bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center">

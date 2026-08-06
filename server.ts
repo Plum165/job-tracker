@@ -8,6 +8,7 @@ import { globalApiRateLimiter, authRateLimiter } from './src/backend/middleware/
 import { requestLogger } from './src/backend/middleware/requestLogger';
 import { errorHandler } from './src/backend/middleware/errorHandler';
 import authRouter from './src/backend/controllers/authController';
+import userRouter from './src/backend/controllers/userController';
 
 async function startServer() {
   // 1. Validate environment configuration
@@ -52,6 +53,7 @@ async function startServer() {
   app.use('/api/auth/refresh', authRateLimiter);
 
   app.use('/api/auth', authRouter);
+  app.use('/api/users', userRouter);
 
   // 9. Vite Dev Server / Static SPA Fallback
   if (process.env.NODE_ENV !== 'production') {
