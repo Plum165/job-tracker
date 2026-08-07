@@ -158,3 +158,18 @@ Seed data in `prisma/seed.ts` populates default enterprise accounts:
 6. **Dual JWT Generation**: Issues 15-minute Access Token and 7-day Refresh Token recorded in PostgreSQL.
 7. **Token Rotation & Replay Protection**: Refreshing tokens revokes the old token record. If a revoked token is reused, all user refresh tokens are invalidated immediately.
 
+---
+
+## 7. Frontend Authentication Architecture & Automatic Refresh
+
+The React presentation layer connects to the backend API via an Axios-based client (`src/lib/apiClient.ts`):
+
+1. **Token Storage (`TokenStorage`)**: Access tokens and refresh tokens are managed securely with memory and `localStorage` fallback persistence.
+2. **Axios Interceptors**:
+   - **Request Interceptor**: Automatically injects `Authorization: Bearer <accessToken>` headers into outbound requests.
+   - **Response Interceptor**: Intercepts `401 Unauthorized` API responses. It queues concurrent failing requests, triggers a single `/api/auth/refresh` endpoint request using the refresh token, updates stored credentials, and retries all queued requests transparently without requiring manual page refresh or interrupting the user.
+   - **Unrecoverable Rejection Guard**: If token refresh fails or credentials are revoked, queued requests are rejected and the user is automatically logged out to a clean state.
+3. **Auth Context (`AuthContext.tsx`)**: Exposes reactive `user`, `tokens`, `isAuthenticated`, `isLoading`, `login`, `signup`, `logout`, and `refreshTokens` states across the app.
+4. **Protected Routes (`ProtectedRoute.tsx`)**: Wraps core routes and views. Handles session restoration loading spinners, authentication guards, and role-based authorization rules (`STUDENT`, `EMPLOYEE`, `ADMIN`).
+5. **Custom Hooks (`useAuth`, `useRequireAuth`, `useUserRole`)**: Simplifies session checking, role validation, and route protection in UI components.
+

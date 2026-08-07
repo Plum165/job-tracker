@@ -8,6 +8,7 @@ import { Navbar } from './components/Navbar';
 import { AddOpportunityModal } from './components/Opportunities/AddOpportunityModal';
 import { OpportunityCatalog } from './components/Opportunities/OpportunityCatalog';
 import { OpportunityDetailModal } from './components/Opportunities/OpportunityDetailModal';
+import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import { EnterpriseAuthView } from './components/Auth/EnterpriseAuthView';
 import { AuthPage } from './components/Auth/AuthPage';
 import { ToastContainer } from './components/UI/ToastContainer';
@@ -20,13 +21,15 @@ const MainContent: React.FC = () => {
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-      {activeTab === 'dashboard' && <DashboardView />}
-      {activeTab === 'catalog' && <OpportunityCatalog />}
-      {activeTab === 'kanban' && <KanbanBoard />}
-      {activeTab === 'calendar' && <CalendarView />}
-      {activeTab === 'contacts' && <ContactsView />}
-      {activeTab === 'data' && <DataManagementView />}
-      {activeTab === 'auth' && <EnterpriseAuthView />}
+      <ProtectedRoute>
+        {activeTab === 'dashboard' && <DashboardView />}
+        {activeTab === 'catalog' && <OpportunityCatalog />}
+        {activeTab === 'kanban' && <KanbanBoard />}
+        {activeTab === 'calendar' && <CalendarView />}
+        {activeTab === 'contacts' && <ContactsView />}
+        {activeTab === 'data' && <DataManagementView />}
+        {activeTab === 'auth' && <EnterpriseAuthView />}
+      </ProtectedRoute>
     </main>
   );
 };

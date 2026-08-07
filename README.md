@@ -47,15 +47,17 @@ Most job application tools either force users into expensive cloud databases req
 ### Frontend
 - **React 19**: Modern component composition and hooks.
 - **TypeScript 5.8**: Complete end-to-end type safety for data models.
+- **Axios**: Production API client featuring request/response interceptors for automatic dual-token JWT refresh queueing.
 - **Vite 6**: Fast bundling and instant local dev environment.
 - **Tailwind CSS v4**: Utility-first styling with high-contrast neutral palette.
 - **Lucide React**: Clean vector icons.
 - **Motion**: Fluid route transitions and entry animations.
 - **Canvas-Confetti**: Celebration effects upon receiving job offers!
 
-### Data & Utilities
-- **IndexedDB & LocalStorage**: Client-side zero-backend persistence engine.
-- **SheetJS (XLSX)**: Browser-side Excel spreadsheet parsing and generation.
+### Backend & Authentication
+- **Express + Prisma ORM**: Decoupled layered architecture with PostgreSQL database.
+- **Dual-Token JWT Auth**: Short-lived access tokens + rotating refresh tokens with replay detection.
+- **Protected Routes & Hooks**: `ProtectedRoute` wrapper component and custom `useAuth` / `useRequireAuth` hooks for seamless session restoration and role-based access controls.
 
 ---
 

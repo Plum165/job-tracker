@@ -1,131 +1,87 @@
+import { apiClient } from './apiClient';
 import { Contact, JobOpportunity, UserApplicationState, ApplicationStatus, PriorityLevel } from '../types';
-
-async function fetchWithAuth<T>(
-  url: string,
-  token: string | null | undefined,
-  options: RequestInit = {}
-): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options.headers as Record<string, string> || {}),
-  };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
-
-  const json = await res.json();
-  if (!res.ok) {
-    throw new Error(json.message || `API request failed with status ${res.status}`);
-  }
-
-  return json.data as T;
-}
 
 export const JobTrackerAPI = {
   // --- JOBS ---
-  async getVisibleJobs(token: string | null | undefined): Promise<JobOpportunity[]> {
-    if (!token) return [];
-    return fetchWithAuth<JobOpportunity[]>('/api/jobs', token);
+  async getVisibleJobs(_token?: string | null): Promise<JobOpportunity[]> {
+    const res = await apiClient.get('/api/jobs');
+    return res.data.data;
   },
 
-  async getPublicJobs(token: string | null | undefined): Promise<JobOpportunity[]> {
-    if (!token) return [];
-    return fetchWithAuth<JobOpportunity[]>('/api/jobs/public', token);
+  async getPublicJobs(_token?: string | null): Promise<JobOpportunity[]> {
+    const res = await apiClient.get('/api/jobs/public');
+    return res.data.data;
   },
 
-  async getUserPrivateJobs(token: string | null | undefined): Promise<JobOpportunity[]> {
-    if (!token) return [];
-    return fetchWithAuth<JobOpportunity[]>('/api/jobs/mine', token);
+  async getUserPrivateJobs(_token?: string | null): Promise<JobOpportunity[]> {
+    const res = await apiClient.get('/api/jobs/mine');
+    return res.data.data;
   },
 
-  async createJob(token: string | null | undefined, job: Partial<JobOpportunity>): Promise<JobOpportunity> {
-    return fetchWithAuth<JobOpportunity>('/api/jobs', token, {
-      method: 'POST',
-      body: JSON.stringify(job),
-    });
+  async createJob(_token: string | null | undefined, job: Partial<JobOpportunity>): Promise<JobOpportunity> {
+    const res = await apiClient.post('/api/jobs', job);
+    return res.data.data;
   },
 
-  async updateJob(token: string | null | undefined, jobId: string, job: Partial<JobOpportunity>): Promise<JobOpportunity> {
-    return fetchWithAuth<JobOpportunity>(`/api/jobs/${jobId}`, token, {
-      method: 'PATCH',
-      body: JSON.stringify(job),
-    });
+  async updateJob(_token: string | null | undefined, jobId: string, job: Partial<JobOpportunity>): Promise<JobOpportunity> {
+    const res = await apiClient.patch(`/api/jobs/${jobId}`, job);
+    return res.data.data;
   },
 
-  async deleteJob(token: string | null | undefined, jobId: string): Promise<void> {
-    await fetchWithAuth<void>(`/api/jobs/${jobId}`, token, {
-      method: 'DELETE',
-    });
+  async deleteJob(_token: string | null | undefined, jobId: string): Promise<void> {
+    await apiClient.delete(`/api/jobs/${jobId}`);
   },
 
   // --- APPLICATION STATES ---
-  async getUserApplications(token: string | null | undefined): Promise<Record<string, UserApplicationState>> {
-    if (!token) return {};
-    return fetchWithAuth<Record<string, UserApplicationState>>('/api/applications', token);
+  async getUserApplications(_token?: string | null): Promise<Record<string, UserApplicationState>> {
+    const res = await apiClient.get('/api/applications');
+    return res.data.data;
   },
 
   async saveApplicationState(
-    token: string | null | undefined,
+    _token: string | null | undefined,
     opportunityId: string,
     state: Partial<UserApplicationState>
   ): Promise<UserApplicationState> {
-    return fetchWithAuth<UserApplicationState>(`/api/applications/${opportunityId}`, token, {
-      method: 'PUT',
-      body: JSON.stringify(state),
-    });
+    const res = await apiClient.put(`/api/applications/${opportunityId}`, state);
+    return res.data.data;
   },
 
   async updateStatus(
-    token: string | null | undefined,
+    _token: string | null | undefined,
     opportunityId: string,
     status: ApplicationStatus
   ): Promise<UserApplicationState> {
-    return fetchWithAuth<UserApplicationState>(`/api/applications/${opportunityId}/status`, token, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
+    const res = await apiClient.patch(`/api/applications/${opportunityId}/status`, { status });
+    return res.data.data;
   },
 
   async updatePriority(
-    token: string | null | undefined,
+    _token: string | null | undefined,
     opportunityId: string,
     priority: PriorityLevel
   ): Promise<UserApplicationState> {
-    return fetchWithAuth<UserApplicationState>(`/api/applications/${opportunityId}/priority`, token, {
-      method: 'PATCH',
-      body: JSON.stringify({ priority }),
-    });
+    const res = await apiClient.patch(`/api/applications/${opportunityId}/priority`, { priority });
+    return res.data.data;
   },
 
   // --- CONTACTS ---
-  async getContacts(token: string | null | undefined): Promise<Contact[]> {
-    if (!token) return [];
-    return fetchWithAuth<Contact[]>('/api/contacts', token);
+  async getContacts(_token?: string | null): Promise<Contact[]> {
+    const res = await apiClient.get('/api/contacts');
+    return res.data.data;
   },
 
-  async createContact(token: string | null | undefined, contact: Partial<Contact>): Promise<Contact> {
-    return fetchWithAuth<Contact>('/api/contacts', token, {
-      method: 'POST',
-      body: JSON.stringify(contact),
-    });
+  async createContact(_token: string | null | undefined, contact: Partial<Contact>): Promise<Contact> {
+    const res = await apiClient.post('/api/contacts', contact);
+    return res.data.data;
   },
 
-  async updateContact(token: string | null | undefined, contactId: string, contact: Partial<Contact>): Promise<Contact> {
-    return fetchWithAuth<Contact>(`/api/contacts/${contactId}`, token, {
-      method: 'PATCH',
-      body: JSON.stringify(contact),
-    });
+  async updateContact(_token: string | null | undefined, contactId: string, contact: Partial<Contact>): Promise<Contact> {
+    const res = await apiClient.patch(`/api/contacts/${contactId}`, contact);
+    return res.data.data;
   },
 
-  async deleteContact(token: string | null | undefined, contactId: string): Promise<void> {
-    await fetchWithAuth<void>(`/api/contacts/${contactId}`, token, {
-      method: 'DELETE',
-    });
+  async deleteContact(_token: string | null | undefined, contactId: string): Promise<void> {
+    await apiClient.delete(`/api/contacts/${contactId}`);
   },
 };

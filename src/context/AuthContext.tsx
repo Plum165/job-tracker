@@ -1,11 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { IdentifierType, User, UserRole } from '../backend/types/auth';
-
-interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
+import { apiClient, TokenStorage, AuthTokens, registerAuthLogoutHandler } from '../lib/apiClient';
 
 interface AuthContextType {
   user: Omit<User, 'passwordHash'> | null;
@@ -15,7 +10,15 @@ interface AuthContextType {
   lastDetectedIdentifierType: IdentifierType | null;
   activeSessionsCount: number;
   login: (identifier: string, password: string) => Promise<void>;
-  signup: (data: { fullName: string; email: string; username: string; password: string; role?: UserRole; studentId?: string; employeeId?: string }) => Promise<void>;
+  signup: (data: {
+    fullName: string;
+    email: string;
+    username: string;
+    password: string;
+    role?: UserRole;
+    studentId?: string;
+    employeeId?: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   refreshTokens: () => Promise<void>;
   revokeAllSessions: () => Promise<void>;
@@ -25,19 +28,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<Omit<User, 'passwordHash'> | null>(() => {
-    const savedUser = localStorage.getItem('jwt_auth_user');
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
-  const [tokens, setTokens] = useState<AuthTokens | null>(() => {
-    const saved = localStorage.getItem('jwt_auth_tokens');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState<Omit<User, 'passwordHash'> | null>(() => TokenStorage.getUser());
+  const [tokens, setTokens] = useState<AuthTokens | null>(() => TokenStorage.getTokens());
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [lastDetectedIdentifierType, setLastDetectedIdentifierType] = useState<IdentifierType | null>(null);
   const [activeSessionsCount, setActiveSessionsCount] = useState<number>(1);
 
-  // Client-side regex inference detector for interactive UI feedback
+  // Detector for interactive UI feedback on identity type (Email vs Student ID vs Employee ID vs Username)
   const detectIdentifier = (input: string): IdentifierType => {
     const clean = input.trim();
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) return 'EMAIL';
@@ -46,31 +43,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return 'USERNAME';
   };
 
-  // Check initial token validity and fetch user profile
+  // Register automatic logout trigger when apiClient encounters an unrecoverable refresh error
+  useEffect(() => {
+    registerAuthLogoutHandler(() => {
+      setUser(null);
+      setTokens(null);
+      TokenStorage.clearAll();
+    });
+  }, []);
+
+  // On initial mount, verify session and restore user state via /api/auth/me
   useEffect(() => {
     const initAuth = async () => {
-      if (tokens?.accessToken) {
-        if (tokens.accessToken.startsWith('demo_') || tokens.accessToken.startsWith('local_')) {
+      const storedTokens = TokenStorage.getTokens();
+      if (storedTokens?.accessToken) {
+        if (storedTokens.accessToken.startsWith('demo_') || storedTokens.accessToken.startsWith('local_')) {
           setIsLoading(false);
           return;
         }
-        try {
-          const res = await fetch('/api/auth/me', {
-            headers: { Authorization: `Bearer ${tokens.accessToken}` },
-          });
 
-          if (res.ok) {
-            const json = await res.json();
-            setUser(json.data.user);
-            localStorage.setItem('jwt_auth_user', JSON.stringify(json.data.user));
-            fetchSessions(tokens.accessToken);
-          } else {
-            // Try refresh
-            await refreshTokens();
+        try {
+          const res = await apiClient.get('/api/auth/me');
+          if (res.data?.data?.user) {
+            const fetchedUser = res.data.data.user;
+            setUser(fetchedUser);
+            TokenStorage.setUser(fetchedUser);
+            fetchSessions();
           }
         } catch {
-          // Keep existing local session if offline
+          // If token restoration fails and refresh fails, clear session
+          setUser(null);
+          setTokens(null);
+          TokenStorage.clearAll();
         }
+      } else {
+        setIsLoading(false);
       }
       setIsLoading(false);
     };
@@ -78,17 +85,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const fetchSessions = async (accessToken: string) => {
+  const fetchSessions = async () => {
     try {
-      const res = await fetch('/api/auth/active-sessions', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setActiveSessionsCount(json.count || 1);
+      const res = await apiClient.get('/api/auth/active-sessions');
+      if (res.data?.count) {
+        setActiveSessionsCount(res.data.count);
       }
     } catch {
-      // Ignore
+      // Non-critical background call
     }
   };
 
@@ -119,32 +123,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(demoUser);
         setTokens(demoTokens);
         setLastDetectedIdentifierType('USERNAME');
-        localStorage.setItem('jwt_auth_user', JSON.stringify(demoUser));
-        localStorage.setItem('jwt_auth_tokens', JSON.stringify(demoTokens));
+        TokenStorage.setUser(demoUser as any);
+        TokenStorage.setTokens(demoTokens);
         return;
       }
 
-      // Try API login
+      // API Login via apiClient
       try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ identifier, password }),
-        });
+        const res = await apiClient.post('/api/auth/login', { identifier, password });
+        const data = res.data.data;
 
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json.message || 'Authentication failed');
-        }
-
-        setUser(json.data.user);
-        setTokens(json.data.tokens);
-        setLastDetectedIdentifierType(json.data.detectedIdentifierType);
-        localStorage.setItem('jwt_auth_user', JSON.stringify(json.data.user));
-        localStorage.setItem('jwt_auth_tokens', JSON.stringify(json.data.tokens));
-        fetchSessions(json.data.tokens.accessToken);
+        setUser(data.user);
+        setTokens(data.tokens);
+        setLastDetectedIdentifierType(data.detectedIdentifierType);
+        TokenStorage.setUser(data.user);
+        TokenStorage.setTokens(data.tokens);
+        fetchSessions();
       } catch (err: any) {
-        // Fallback demo handling if backend unavailable or testing offline
+        const message = err.response?.data?.message || err.message || 'Authentication failed';
+
+        // Fallback for demo testing if backend is offline or mock environment
         if (password === '1234' || password === 'Password123!') {
           const detectedType = detectIdentifier(identifier);
           const fallbackUser: Omit<User, 'passwordHash'> = {
@@ -163,11 +161,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(fallbackUser);
           setTokens(fallbackTokens);
           setLastDetectedIdentifierType(detectedType);
-          localStorage.setItem('jwt_auth_user', JSON.stringify(fallbackUser));
-          localStorage.setItem('jwt_auth_tokens', JSON.stringify(fallbackTokens));
+          TokenStorage.setUser(fallbackUser as any);
+          TokenStorage.setTokens(fallbackTokens);
           return;
         }
-        throw err;
+
+        throw new Error(message);
       }
     } finally {
       setIsLoading(false);
@@ -186,24 +185,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     try {
       try {
-        const res = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        });
+        const res = await apiClient.post('/api/auth/signup', data);
+        const resData = res.data.data;
 
-        const json = await res.json();
-        if (!res.ok) {
-          throw new Error(json.message || 'Registration failed');
-        }
-
-        setUser(json.data.user);
-        setTokens(json.data.tokens);
-        setLastDetectedIdentifierType(json.data.detectedIdentifierType);
-        localStorage.setItem('jwt_auth_user', JSON.stringify(json.data.user));
-        localStorage.setItem('jwt_auth_tokens', JSON.stringify(json.data.tokens));
+        setUser(resData.user);
+        setTokens(resData.tokens);
+        setLastDetectedIdentifierType(resData.detectedIdentifierType);
+        TokenStorage.setUser(resData.user);
+        TokenStorage.setTokens(resData.tokens);
       } catch (err: any) {
-        if (err.message && !err.message.includes('exists')) {
+        const message = err.response?.data?.message || err.message || 'Registration failed';
+
+        if (!message.toLowerCase().includes('exists') && !message.toLowerCase().includes('already')) {
           const newUser: Omit<User, 'passwordHash'> = {
             id: `usr-${Date.now()}`,
             fullName: data.fullName,
@@ -221,11 +214,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           };
           setUser(newUser);
           setTokens(newTokens);
-          localStorage.setItem('jwt_auth_user', JSON.stringify(newUser));
-          localStorage.setItem('jwt_auth_tokens', JSON.stringify(newTokens));
+          TokenStorage.setUser(newUser as any);
+          TokenStorage.setTokens(newTokens);
           return;
         }
-        throw err;
+
+        throw new Error(message);
       }
     } finally {
       setIsLoading(false);
@@ -233,64 +227,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshTokens = async () => {
-    if (!tokens?.refreshToken) return;
-    if (tokens.refreshToken.startsWith('demo_') || tokens.refreshToken.startsWith('local_')) {
+    const currentTokens = TokenStorage.getTokens();
+    if (!currentTokens?.refreshToken) return;
+    if (currentTokens.refreshToken.startsWith('demo_') || currentTokens.refreshToken.startsWith('local_')) {
       return;
     }
 
     try {
-      const res = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: tokens.refreshToken }),
+      const res = await apiClient.post('/api/auth/refresh', {
+        refreshToken: currentTokens.refreshToken,
       });
 
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.message || 'Session expired');
-      }
-
-      const newTokens = {
-        accessToken: json.data.accessToken,
-        refreshToken: json.data.refreshToken,
-        expiresIn: json.data.expiresIn,
+      const newTokens: AuthTokens = {
+        accessToken: res.data.data.accessToken,
+        refreshToken: res.data.data.refreshToken,
+        expiresIn: res.data.data.expiresIn,
       };
 
       setTokens(newTokens);
-      localStorage.setItem('jwt_auth_tokens', JSON.stringify(newTokens));
+      TokenStorage.setTokens(newTokens);
     } catch {
       setUser(null);
       setTokens(null);
-      localStorage.removeItem('jwt_auth_tokens');
-      localStorage.removeItem('jwt_auth_user');
+      TokenStorage.clearAll();
     }
   };
 
   const logout = async () => {
-    if (tokens?.refreshToken && !tokens.refreshToken.startsWith('demo_') && !tokens.refreshToken.startsWith('local_')) {
+    const currentTokens = TokenStorage.getTokens();
+    if (currentTokens?.refreshToken && !currentTokens.refreshToken.startsWith('demo_') && !currentTokens.refreshToken.startsWith('local_')) {
       try {
-        await fetch('/api/auth/logout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken: tokens.refreshToken }),
-        });
+        await apiClient.post('/api/auth/logout', { refreshToken: currentTokens.refreshToken });
       } catch {
-        // Ignore
+        // Ignore logout network errors
       }
     }
     setUser(null);
     setTokens(null);
-    localStorage.removeItem('jwt_auth_tokens');
-    localStorage.removeItem('jwt_auth_user');
+    TokenStorage.clearAll();
   };
 
   const revokeAllSessions = async () => {
-    if (!tokens?.accessToken) return;
     try {
-      await fetch('/api/auth/revoke-all', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${tokens.accessToken}` },
-      });
+      await apiClient.post('/api/auth/revoke-all');
       await logout();
     } catch {
       // Ignore
