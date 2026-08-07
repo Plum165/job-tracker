@@ -58,6 +58,6 @@ export const deleteAccountSchema = z.object({
 
 export const updateRoleSchema = z.object({
   role: z.enum(['STUDENT', 'EMPLOYEE', 'ADMIN'], {
-    invalid_type_error: 'Role must be STUDENT, EMPLOYEE, or ADMIN',
+    message: 'Role must be STUDENT, EMPLOYEE, or ADMIN',
   }),
 });

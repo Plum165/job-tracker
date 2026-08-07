@@ -5,12 +5,16 @@ import { StatusLegend } from '../UI/StatusLegend';
 import { OpportunityCard } from './OpportunityCard';
 import { OpportunityTable } from './OpportunityTable';
 import {
+  Briefcase,
   Filter,
+  Globe,
   Grid,
   List,
+  Lock,
   RotateCcw,
   Search,
   SlidersHorizontal,
+  Sparkles,
   X,
 } from 'lucide-react';
 
@@ -20,6 +24,8 @@ export const OpportunityCatalog: React.FC = () => {
     filteredOpportunities,
     catalogViewMode,
     setCatalogViewMode,
+    catalogScope,
+    setCatalogScope,
     searchQuery,
     setSearchQuery,
     selectedCategory,
@@ -73,6 +79,59 @@ export const OpportunityCatalog: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* 2-Section Catalog Scope Switcher */}
+      <div className="p-3 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
+              Catalog View Mode & Scope
+            </span>
+          </div>
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            Personal application state & notes remain 100% private
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <button
+            onClick={() => setCatalogScope('all')}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer border ${
+              catalogScope === 'all'
+                ? 'bg-slate-900 dark:bg-blue-600 text-white border-slate-900 dark:border-blue-500 shadow-sm'
+                : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Briefcase className="w-4 h-4" />
+            <span>All Opportunities ({allOpportunities.length})</span>
+          </button>
+
+          <button
+            onClick={() => setCatalogScope('public')}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer border ${
+              catalogScope === 'public'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Globe className="w-4 h-4 text-blue-400" />
+            <span>Public Shared Catalog ({allOpportunities.filter((o) => o.isShared).length})</span>
+          </button>
+
+          <button
+            onClick={() => setCatalogScope('private')}
+            className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-bold text-xs transition-all cursor-pointer border ${
+              catalogScope === 'private'
+                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                : 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }`}
+          >
+            <Lock className="w-4 h-4 text-indigo-400" />
+            <span>My Private Applications ({allOpportunities.filter((o) => !o.isShared).length})</span>
+          </button>
+        </div>
+      </div>
+
       {/* Status Legend Key & Filter */}
       <StatusLegend
         activeStatusFilter={selectedStatus}

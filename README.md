@@ -5,9 +5,9 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.0-38bdf8.svg)](https://tailwindcss.com/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
 
-A privacy-focused, zero-backend job opportunity catalog and personal application tracker designed for students, graduates, and engineering candidates. 
+A privacy-focused, enterprise-authenticated job opportunity catalog and personal application tracker designed for students, graduates, and engineering candidates. 
 
-Shared company and job opportunity data is bundled into the application catalog, while each user’s application statuses, personal notes, interview logs, document checklists, and recruiter contacts remain **100% private and stored locally** on their browser using IndexedDB and `localStorage`.
+Shared company and job opportunity data is available in the public catalog, while each user’s application statuses, personal notes, interview logs, document checklists, and recruiter contacts are securely stored in the PostgreSQL database and isolated by JWT authentication, ensuring full user privacy and cross-device persistence.
 
 ---
 

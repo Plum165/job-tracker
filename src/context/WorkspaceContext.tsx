@@ -2,7 +2,9 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { DEFAULT_SHARED_OPPORTUNITIES } from '../data/defaultCatalog';
 import { exportOpportunitiesToExcel, ParsedExcelRow } from '../lib/excelParser';
-import { WorkspaceStorage } from '../lib/storage';
+import { WorkspaceStorage, createDefaultApplicationState } from '../lib/storage';
+import { JobTrackerAPI } from '../lib/api';
+import { useAuth } from './AuthContext';
 import {
   ApplicationStatus,
   Contact,
@@ -15,6 +17,7 @@ import {
 } from '../types';
 
 export type ActiveTab = 'dashboard' | 'catalog' | 'kanban' | 'calendar' | 'contacts' | 'data' | 'auth';
+export type CatalogScope = 'all' | 'public' | 'private';
 
 export interface ToastMessage {
   id: string;
@@ -23,14 +26,22 @@ export interface ToastMessage {
   message: string;
 }
 
+const DEFAULT_SETTINGS_VAL: UserSettings = {
+  theme: 'system',
+  autoBackupReminder: true,
+  defaultView: 'catalog',
+};
+
 interface WorkspaceContextType {
   // Navigation & View
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   
-  // Display Options
+  // Display & Scope Options
   catalogViewMode: 'card' | 'table';
   setCatalogViewMode: (mode: 'card' | 'table') => void;
+  catalogScope: CatalogScope;
+  setCatalogScope: (scope: CatalogScope) => void;
 
   // Search & Filters
   searchQuery: string;
@@ -57,6 +68,7 @@ interface WorkspaceContextType {
   privateStates: Record<string, UserApplicationState>;
   contacts: Contact[];
   settings: UserSettings;
+  isSyncingData: boolean;
 
   // Selected Detail Modal
   selectedOpportunity: JobOpportunity | null;
@@ -89,8 +101,11 @@ interface WorkspaceContextType {
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { tokens, isAuthenticated } = useAuth();
+
   const [activeTab, setActiveTab] = useState<ActiveTab>('catalog');
   const [catalogViewMode, setCatalogViewMode] = useState<'card' | 'table'>('card');
+  const [catalogScope, setCatalogScope] = useState<CatalogScope>('all');
 
   // Search and Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,11 +117,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'closingDate' | 'dateAdded' | 'company' | 'priority'>('closingDate');
 
-  // Storage persistent states
+  // Persistent states
+  const [serverOpportunities, setServerOpportunities] = useState<JobOpportunity[]>([]);
   const [localOpportunities, setLocalOpportunities] = useState<JobOpportunity[]>([]);
   const [privateStates, setPrivateStates] = useState<Record<string, UserApplicationState>>({});
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS_VAL);
+  const [isSyncingData, setIsSyncingData] = useState<boolean>(false);
 
   // Selected item modals
   const [selectedOpportunity, setSelectedOpportunity] = useState<JobOpportunity | null>(null);
@@ -127,19 +144,71 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
-  // Load storage data on mount
+  // Sync data with authenticated backend
   useEffect(() => {
-    setLocalOpportunities(WorkspaceStorage.getLocalOpportunities());
-    setPrivateStates(WorkspaceStorage.getAllPrivateStates());
-    setContacts(WorkspaceStorage.getAllContacts());
-    setSettings(WorkspaceStorage.getSettings());
-  }, []);
+    const loadBackendData = async () => {
+      if (isAuthenticated && tokens?.accessToken) {
+        setIsSyncingData(true);
+        try {
+          const [jobsData, appsData, contactsData] = await Promise.all([
+            JobTrackerAPI.getVisibleJobs(tokens.accessToken).catch(() => []),
+            JobTrackerAPI.getUserApplications(tokens.accessToken).catch(() => ({})),
+            JobTrackerAPI.getContacts(tokens.accessToken).catch(() => []),
+          ]);
 
-  // Combined opportunities (shared catalog + user local creations)
-  const allOpportunities = [...DEFAULT_SHARED_OPPORTUNITIES, ...localOpportunities];
+          if (Array.isArray(jobsData) && jobsData.length > 0) {
+            setServerOpportunities(jobsData);
+          } else {
+            setServerOpportunities(DEFAULT_SHARED_OPPORTUNITIES);
+          }
+
+          if (appsData && typeof appsData === 'object') {
+            setPrivateStates(appsData as Record<string, UserApplicationState>);
+          } else {
+            setPrivateStates(WorkspaceStorage.getAllPrivateStates());
+          }
+
+          if (Array.isArray(contactsData)) {
+            setContacts(contactsData);
+          } else {
+            setContacts(WorkspaceStorage.getAllContacts());
+          }
+        } catch (err) {
+          console.warn('Backend sync warning, falling back to storage:', err);
+          setServerOpportunities(DEFAULT_SHARED_OPPORTUNITIES);
+          setLocalOpportunities(WorkspaceStorage.getLocalOpportunities());
+          setPrivateStates(WorkspaceStorage.getAllPrivateStates());
+          setContacts(WorkspaceStorage.getAllContacts());
+        } finally {
+          setIsSyncingData(false);
+        }
+      } else {
+        // Fallback for offline or unauthenticated browsing
+        setServerOpportunities(DEFAULT_SHARED_OPPORTUNITIES);
+        setLocalOpportunities(WorkspaceStorage.getLocalOpportunities());
+        setPrivateStates(WorkspaceStorage.getAllPrivateStates());
+        setContacts(WorkspaceStorage.getAllContacts());
+        setSettings(WorkspaceStorage.getSettings());
+      }
+    };
+
+    loadBackendData();
+  }, [isAuthenticated, tokens?.accessToken]);
+
+  // Combined opportunities (Shared catalog + User created jobs)
+  const baseOpportunities = isAuthenticated && serverOpportunities.length > 0
+    ? serverOpportunities
+    : [...DEFAULT_SHARED_OPPORTUNITIES, ...localOpportunities];
+
+  // Scope filtering (All, Public Catalog Only, My Private Applications Only)
+  const scopeFilteredOpportunities = baseOpportunities.filter((opp) => {
+    if (catalogScope === 'public') return opp.isShared;
+    if (catalogScope === 'private') return !opp.isShared;
+    return true;
+  });
 
   // Filter & Sort Logic
-  const filteredOpportunities = allOpportunities
+  const filteredOpportunities = scopeFilteredOpportunities
     .filter((opp) => {
       const pState = privateStates[opp.id] || WorkspaceStorage.getPrivateState(opp.id);
 
@@ -165,7 +234,6 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       // Status filter
       if (selectedStatus !== 'All') {
         if (selectedStatus === ApplicationStatus.CLOSED) {
-          // Closed includes explicitly CLOSED, REJECTED, or past closing deadline
           const isPast = new Date(opp.closingDate).getTime() < new Date().setHours(0, 0, 0, 0);
           if (
             pState.status !== ApplicationStatus.CLOSED &&
@@ -229,14 +297,13 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             pB.status
           );
 
-        // Put active upcoming deadlines at top, closed/past/rejected at bottom
         if (!isAInactive && isBInactive) return -1;
         if (isAInactive && !isBInactive) return 1;
 
         if (!isAInactive && !isBInactive) {
-          return timeA - timeB; // Soonest active deadline first
+          return timeA - timeB;
         }
-        return timeB - timeA; // Most recently closed/past deadline first at bottom
+        return timeB - timeA;
       }
       if (sortBy === 'dateAdded') {
         return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
@@ -264,14 +331,32 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   // Actions
   const getPrivateState = (oppId: string): UserApplicationState => {
-    return privateStates[oppId] || WorkspaceStorage.getPrivateState(oppId);
+    if (privateStates[oppId]) return privateStates[oppId];
+    return WorkspaceStorage.getPrivateState(oppId);
   };
 
-  const updateStatus = (oppId: string, status: ApplicationStatus) => {
-    const updated = WorkspaceStorage.updateStatus(oppId, status);
-    setPrivateStates((prev) => ({ ...prev, [oppId]: updated }));
+  const updateStatus = async (oppId: string, status: ApplicationStatus) => {
+    const current = getPrivateState(oppId);
+    const updatedState: UserApplicationState = {
+      ...current,
+      status,
+      dateApplied:
+        status === ApplicationStatus.APPLIED && !current.dateApplied
+          ? new Date().toISOString().split('T')[0]
+          : current.dateApplied,
+    };
 
-    // Confetti on Offer Received!
+    setPrivateStates((prev) => ({ ...prev, [oppId]: updatedState }));
+    WorkspaceStorage.updateStatus(oppId, status);
+
+    if (isAuthenticated && tokens?.accessToken) {
+      try {
+        await JobTrackerAPI.updateStatus(tokens.accessToken, oppId, status);
+      } catch (e) {
+        console.warn('API sync warning:', e);
+      }
+    }
+
     if (status === ApplicationStatus.OFFER) {
       confetti({
         particleCount: 120,
@@ -284,25 +369,55 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  const updatePriority = (oppId: string, priority: PriorityLevel) => {
-    const updated = WorkspaceStorage.updatePriority(oppId, priority);
-    setPrivateStates((prev) => ({ ...prev, [oppId]: updated }));
+  const updatePriority = async (oppId: string, priority: PriorityLevel) => {
+    const current = getPrivateState(oppId);
+    const updatedState: UserApplicationState = { ...current, priority };
+
+    setPrivateStates((prev) => ({ ...prev, [oppId]: updatedState }));
+    WorkspaceStorage.updatePriority(oppId, priority);
+
+    if (isAuthenticated && tokens?.accessToken) {
+      try {
+        await JobTrackerAPI.updatePriority(tokens.accessToken, oppId, priority);
+      } catch (e) {
+        console.warn('API sync warning:', e);
+      }
+    }
+
     addToast('Priority Set', `Priority level updated to ${priority}`, 'info');
   };
 
-  const savePrivateState = (state: UserApplicationState) => {
-    WorkspaceStorage.savePrivateState(state);
+  const savePrivateState = async (state: UserApplicationState) => {
     setPrivateStates((prev) => ({ ...prev, [state.opportunityId]: state }));
+    WorkspaceStorage.savePrivateState(state);
+
+    if (isAuthenticated && tokens?.accessToken) {
+      try {
+        await JobTrackerAPI.saveApplicationState(tokens.accessToken, state.opportunityId, state);
+      } catch (e) {
+        console.warn('API sync warning:', e);
+      }
+    }
+
     addToast('Saved', 'Personal application notes & progress updated', 'success');
   };
 
-  const saveLocalOpportunity = (
+  const saveLocalOpportunity = async (
     opp: JobOpportunity,
     initialStatus?: ApplicationStatus,
     initialNotes?: string
   ) => {
-    const updatedLocals = WorkspaceStorage.saveLocalOpportunity(opp);
-    setLocalOpportunities(updatedLocals);
+    setLocalOpportunities((prev) => [opp, ...prev.filter((o) => o.id !== opp.id)]);
+    setServerOpportunities((prev) => [opp, ...prev.filter((o) => o.id !== opp.id)]);
+    WorkspaceStorage.saveLocalOpportunity(opp);
+
+    if (isAuthenticated && tokens?.accessToken) {
+      try {
+        await JobTrackerAPI.createJob(tokens.accessToken, opp);
+      } catch (e) {
+        console.warn('API sync warning:', e);
+      }
+    }
 
     if (initialStatus || initialNotes) {
       const currentPrivate = getPrivateState(opp.id);
@@ -312,26 +427,67 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         personalNotes: initialNotes !== undefined ? initialNotes : currentPrivate.personalNotes,
       };
       savePrivateState(updatedPrivate);
+    } else {
+      addToast('Opportunity Saved', `${opp.companyName} - ${opp.jobTitle} saved to opportunities`, 'success');
+    }
+  };
+
+  const deleteLocalOpportunity = async (oppId: string) => {
+    setLocalOpportunities((prev) => prev.filter((o) => o.id !== oppId));
+    setServerOpportunities((prev) => prev.filter((o) => o.id !== oppId));
+    WorkspaceStorage.deleteLocalOpportunity(oppId);
+
+    if (isAuthenticated && tokens?.accessToken) {
+      try {
+        await JobTrackerAPI.deleteJob(tokens.accessToken, oppId);
+      } catch (e) {
+        console.warn('API sync warning:', e);
+      }
     }
 
-    addToast('Opportunity Saved', `${opp.companyName} - ${opp.jobTitle} saved to local opportunities`, 'success');
+    addToast('Opportunity Removed', 'Job opportunity deleted', 'info');
   };
 
-  const deleteLocalOpportunity = (oppId: string) => {
-    const updated = WorkspaceStorage.deleteLocalOpportunity(oppId);
-    setLocalOpportunities(updated);
-    addToast('Opportunity Removed', 'Local job opportunity deleted', 'info');
-  };
+  const saveContact = async (contact: Contact) => {
+    setContacts((prev) => {
+      const idx = prev.findIndex((c) => c.id === contact.id);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = contact;
+        return copy;
+      }
+      return [contact, ...prev];
+    });
+    WorkspaceStorage.saveContact(contact);
 
-  const saveContact = (contact: Contact) => {
-    const updated = WorkspaceStorage.saveContact(contact);
-    setContacts(updated);
+    if (isAuthenticated && tokens?.accessToken) {
+      try {
+        const existing = contacts.find((c) => c.id === contact.id);
+        if (existing) {
+          await JobTrackerAPI.updateContact(tokens.accessToken, contact.id, contact);
+        } else {
+          await JobTrackerAPI.createContact(tokens.accessToken, contact);
+        }
+      } catch (e) {
+        console.warn('API sync warning:', e);
+      }
+    }
+
     addToast('Contact Saved', `${contact.name} saved to your contacts network`, 'success');
   };
 
-  const deleteContact = (contactId: string) => {
-    const updated = WorkspaceStorage.deleteContact(contactId);
-    setContacts(updated);
+  const deleteContact = async (contactId: string) => {
+    setContacts((prev) => prev.filter((c) => c.id !== contactId));
+    WorkspaceStorage.deleteContact(contactId);
+
+    if (isAuthenticated && tokens?.accessToken) {
+      try {
+        await JobTrackerAPI.deleteContact(tokens.accessToken, contactId);
+      } catch (e) {
+        console.warn('API sync warning:', e);
+      }
+    }
+
     addToast('Contact Removed', 'Contact deleted from network', 'info');
   };
 
@@ -341,21 +497,10 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     validRows.forEach((r) => {
       const opp = r.mapped as JobOpportunity;
-      WorkspaceStorage.saveLocalOpportunity(opp);
+      saveLocalOpportunity(opp, r.initialStatus, r.initialNotes);
       count++;
-
-      if (r.initialStatus || r.initialNotes) {
-        const pState = WorkspaceStorage.getPrivateState(opp.id);
-        WorkspaceStorage.savePrivateState({
-          ...pState,
-          status: r.initialStatus || pState.status,
-          personalNotes: r.initialNotes || pState.personalNotes,
-        });
-      }
     });
 
-    setLocalOpportunities(WorkspaceStorage.getLocalOpportunities());
-    setPrivateStates(WorkspaceStorage.getAllPrivateStates());
     addToast('Excel Import Complete', `Successfully imported ${count} job opportunities from spreadsheet!`, 'success');
   };
 
@@ -387,13 +532,14 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const exportToExcel = () => {
-    exportOpportunitiesToExcel(allOpportunities, privateStates);
+    exportOpportunitiesToExcel(baseOpportunities, privateStates);
     addToast('Excel Exported', 'Spreadsheet generated and downloaded!', 'success');
   };
 
   const clearAllData = () => {
     WorkspaceStorage.clearAllWorkspaceData();
     setLocalOpportunities([]);
+    setServerOpportunities(DEFAULT_SHARED_OPPORTUNITIES);
     setPrivateStates({});
     setContacts([]);
     setSettings(DEFAULT_SETTINGS_VAL);
@@ -403,7 +549,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const updateSettings = (newSettings: Partial<UserSettings>) => {
     const updated = WorkspaceStorage.saveSettings(newSettings);
     setSettings(updated);
-    addToast('Settings Saved', 'Preferences updated', 'success');
+    addToast('Settings Updated', 'Preferences saved', 'success');
   };
 
   return (
@@ -413,6 +559,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setActiveTab,
         catalogViewMode,
         setCatalogViewMode,
+        catalogScope,
+        setCatalogScope,
         searchQuery,
         setSearchQuery,
         selectedCategory,
@@ -430,11 +578,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         sortBy,
         setSortBy,
         resetFilters,
-        allOpportunities,
+        allOpportunities: baseOpportunities,
         filteredOpportunities,
         privateStates,
         contacts,
         settings,
+        isSyncingData,
         selectedOpportunity,
         setSelectedOpportunity,
         isAddOpportunityOpen,
@@ -463,13 +612,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   );
 };
 
-const DEFAULT_SETTINGS_VAL: UserSettings = {
-  theme: 'system',
-  autoBackupReminder: true,
-  defaultView: 'catalog',
-};
-
-export const useWorkspace = () => {
+export const useWorkspace = (): WorkspaceContextType => {
   const context = useContext(WorkspaceContext);
   if (!context) {
     throw new Error('useWorkspace must be used within a WorkspaceProvider');

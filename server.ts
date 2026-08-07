@@ -9,6 +9,9 @@ import { requestLogger } from './src/backend/middleware/requestLogger';
 import { errorHandler } from './src/backend/middleware/errorHandler';
 import authRouter from './src/backend/controllers/authController';
 import userRouter from './src/backend/controllers/userController';
+import jobRouter from './src/backend/controllers/jobController';
+import applicationRouter from './src/backend/controllers/applicationController';
+import contactRouter from './src/backend/controllers/contactController';
 
 async function startServer() {
   // 1. Validate environment configuration
@@ -54,6 +57,9 @@ async function startServer() {
 
   app.use('/api/auth', authRouter);
   app.use('/api/users', userRouter);
+  app.use('/api/jobs', jobRouter);
+  app.use('/api/applications', applicationRouter);
+  app.use('/api/contacts', contactRouter);
 
   // 9. Vite Dev Server / Static SPA Fallback
   if (process.env.NODE_ENV !== 'production') {

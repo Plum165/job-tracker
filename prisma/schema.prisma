@@ -28,6 +28,9 @@ model User {
   updatedAt    DateTime       @default(now()) @updatedAt
 
   tokens       RefreshToken[]
+  applications UserApplicationState[]
+  contacts     Contact[]
+  createdJobs  JobOpportunity[]       @relation("CreatedJobs")
 
   @@map("users")
 }
@@ -46,4 +49,73 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("refresh_tokens")
+}
+
+model JobOpportunity {
+  id                 String   @id
+  companyName        String
+  companyLogo        String?
+  jobTitle           String
+  jobCategory        String
+  companyDescription String
+  companyWebsite     String
+  applicationLink    String
+  location           String
+  workArrangement    String
+  employmentType     String
+  dateAdded          DateTime @default(now())
+  openingDate        String?
+  closingDate        String
+  generalNotes       String?
+  tags               String   @default("[]") // JSON string of string[]
+  isShared           Boolean  @default(false)
+  createdById        String?
+
+  createdBy    User?                  @relation("CreatedJobs", fields: [createdById], references: [id], onDelete: SetNull)
+  applications UserApplicationState[]
+
+  @@map("job_opportunities")
+}
+
+model UserApplicationState {
+  id                String   @id @default(uuid())
+  userId            String
+  opportunityId     String
+  status            String
+  priority          String   @default("Medium")
+  dateApplied       String?
+  personalNotes     String   @default("")
+  followUpDate      String?
+  interviewDates    String   @default("[]") // JSON array of InterviewRecord
+  documentsPrepared String   @default("{}") // JSON object of DocumentChecklist
+  personalLinks     String   @default("[]") // JSON array of PersonalLink
+  lastUpdated       DateTime @default(now()) @updatedAt
+
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity JobOpportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, opportunityId])
+  @@map("user_application_states")
+}
+
+model Contact {
+  id                  String   @id @default(uuid())
+  userId              String
+  name                String
+  company             String
+  opportunityId       String?
+  role                String
+  email               String
+  linkedIn            String
+  howMet              String
+  dateContacted       String
+  lastInteractionDate String
+  followUpDate        String?
+  privateNotes        String   @default("")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("contacts")
 }
