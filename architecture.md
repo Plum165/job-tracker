@@ -188,4 +188,23 @@ The project features a comprehensive **Vitest** test suite covering unit, integr
    - `tests/api/authRoutes.test.ts`: Exercises Express HTTP endpoints (`/api/auth/signup`, `/api/auth/login`, `/api/auth/me`, `/api/auth/refresh`, `/api/auth/logout`) via Supertest.
    - `tests/api/roleAuthorization.test.ts`: Verifies role-based access control (`requireRole('ADMIN')` vs `STUDENT`), route protection, and data isolation between accounts.
 
+---
+
+## 9. Production Deployment Architecture & Operations
+
+The application is decoupled into an edge-hosted Single Page Application (SPA) and an auto-scaling Node.js backend:
+
+1. **Frontend Hosting (Vercel)**:
+   - Configured via `vercel.json` with SPA route rewrites to `index.html`.
+   - Automatic edge security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy).
+   - Instant zero-downtime rollback capability via Vercel deployments dashboard.
+2. **Backend API Hosting (Render)**:
+   - Defined in `render.yaml` infrastructure-as-code configuration.
+   - Automated health checks at `GET /api/health` with process memory, uptime, and database ping metrics.
+   - Reverse proxy header trust (`trust proxy = 1`) for precise rate-limiting behind cloud load balancers.
+3. **Database Layer (Render PostgreSQL / Neon / Supabase)**:
+   - Relational data model managed via Prisma ORM (`prisma/schema.prisma`).
+   - Automated migrations executed via `npx prisma migrate deploy`.
+
+
 

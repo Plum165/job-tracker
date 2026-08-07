@@ -13,8 +13,14 @@ export function getCorsMiddleware() {
         return callback(null, true);
       }
 
-      // Allow Cloud Run dev preview URLs
-      if (origin.endsWith('.run.app') || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      // Allow Cloud Run dev previews, Vercel frontend, and Render backend URLs
+      if (
+        origin.endsWith('.run.app') ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.onrender.com') ||
+        origin.includes('localhost') ||
+        origin.includes('127.0.0.1')
+      ) {
         return callback(null, true);
       }
 

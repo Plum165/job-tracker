@@ -1,0 +1,34 @@
+services:
+  # Backend Express API Service
+  - type: web
+    name: opportunity-hub-backend
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: opportunity-hub-db
+          property: connectionString
+      - key: CORS_ORIGIN
+        value: "https://opportunity-hub.vercel.app,https://*.vercel.app"
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+
+databases:
+  # Render Managed PostgreSQL Instance
+  - name: opportunity-hub-db
+    databaseName: opportunity_hub
+    user: postgres
+    region: oregon
+    plan: free
+    ipAllowList: [] # Access restricted to Render services

@@ -9,3 +9,5 @@ Detailed architectural notes, design decisions, data model definitions, and back
 3. **Layered Express Architecture**: Clean separation between Controllers, Services, Repositories, and Database client models.
 4. **Architecture & Zero-Backend Privacy**: How shared catalog data interacts with client-side IndexedDB/localStorage workspaces without central data tracking.
 5. **Data Model Specification**: Data schemas for `User`, `RefreshToken`, `JobOpportunity`, `UserApplicationState`, `Contact`, `DocumentChecklist`, and `Reminder`.
+6. **Production Deployment & Operations Guide**: See [`DEPLOYMENT.md`](../DEPLOYMENT.md) for Vercel, Render, PostgreSQL provisioning, production checklist, and rollback procedures.
+7. **AI Agent Specifications**: See [`agents/`](../agents/) for engineering, authentication, and deployment agent definitions.

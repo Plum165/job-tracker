@@ -159,19 +159,15 @@ npm run build
 
 ---
 
-## 8. Deployment
+## 8. Production Deployment & Operations
 
-This application produces static HTML, JavaScript, and CSS bundles that can be deployed to any static host or container platform:
+The application is prepared for enterprise production deployment across Vercel (Frontend SPA), Render (Backend API), and Render Managed PostgreSQL (Database):
 
-### Deploying to Cloud Run / Docker
-The application is pre-configured with Vite and Express static serving binding to port `3000`.
-
-### Deploying to Vercel / Netlify / GitHub Pages
-Build the production static assets:
-```bash
-npm run build
-```
-Deploy the output `dist/` folder to your static hosting provider.
+- **Deployment Guide**: See [`DEPLOYMENT.md`](DEPLOYMENT.md) for step-by-step instructions.
+- **Frontend (Vercel)**: Configured with `vercel.json` for edge static SPA routing, SSL, and security headers.
+- **Backend (Render)**: Defined in `render.yaml` for Node.js Express API service, health checks (`GET /api/health`), and rate limiting.
+- **Database (PostgreSQL)**: Relational database managed with Prisma ORM (`npx prisma migrate deploy`).
+- **AI Agent Specifications**: See [`agents/`](agents/) for engineering, authentication, and deployment agent definitions.
 
 ---
 

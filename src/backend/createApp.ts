@@ -12,6 +12,8 @@ import jobRouter from './controllers/jobController';
 import applicationRouter from './controllers/applicationController';
 import contactRouter from './controllers/contactController';
 
+import { prisma } from './lib/prisma';
+
 export function createExpressApp() {
   const app = express();
 
@@ -26,11 +28,24 @@ export function createExpressApp() {
 
   app.use(requestLogger);
 
-  app.get('/api/health', (req, res) => {
+  app.get('/api/health', async (req, res) => {
+    let dbStatus = 'healthy';
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch {
+      dbStatus = 'degraded_memory_fallback';
+    }
+
     res.json({
       status: 'ok',
-      service: 'Enterprise JWT Authentication Engine',
+      service: 'Opportunity Hub API',
       environment: envConfig.NODE_ENV,
+      uptimeSeconds: Math.floor(process.uptime()),
+      database: dbStatus,
+      memoryUsage: {
+        rssMb: Math.round(process.memoryUsage().rss / (1024 * 1024)),
+        heapUsedMb: Math.round(process.memoryUsage().heapUsed / (1024 * 1024)),
+      },
       timestamp: new Date().toISOString(),
     });
   });
