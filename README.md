@@ -147,6 +147,11 @@ Open `http://localhost:3000` in your web browser.
 npm run lint
 ```
 
+### Run Test Suite
+```bash
+npm test
+```
+
 ### Production Build
 ```bash
 npm run build

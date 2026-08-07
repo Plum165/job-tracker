@@ -173,3 +173,19 @@ The React presentation layer connects to the backend API via an Axios-based clie
 4. **Protected Routes (`ProtectedRoute.tsx`)**: Wraps core routes and views. Handles session restoration loading spinners, authentication guards, and role-based authorization rules (`STUDENT`, `EMPLOYEE`, `ADMIN`).
 5. **Custom Hooks (`useAuth`, `useRequireAuth`, `useUserRole`)**: Simplifies session checking, role validation, and route protection in UI components.
 
+---
+
+## 8. Automated Testing & Quality Assurance Suite
+
+The project features a comprehensive **Vitest** test suite covering unit, integration, and API-level assertions (`npm test`):
+
+1. **Unit Tests**:
+   - `tests/unit/passwordAndSchemas.test.ts`: Verifies bcrypt salted password hashing and Zod schema validations (`loginSchema`, `signupSchema`, `refreshTokenSchema`).
+   - `tests/unit/identifierDetector.test.ts`: Verifies regex pattern recognition for multi-identifier inputs (`EMAIL`, `STUDENT_ID`, `EMPLOYEE_ID`, `USERNAME`).
+2. **Integration Tests**:
+   - `tests/integration/authService.test.ts`: Tests complete end-to-end authentication lifecycle including user registration, multi-identifier login, dual JWT generation, token rotation, replay attack detection, and session revocation.
+3. **API Endpoint Tests**:
+   - `tests/api/authRoutes.test.ts`: Exercises Express HTTP endpoints (`/api/auth/signup`, `/api/auth/login`, `/api/auth/me`, `/api/auth/refresh`, `/api/auth/logout`) via Supertest.
+   - `tests/api/roleAuthorization.test.ts`: Verifies role-based access control (`requireRole('ADMIN')` vs `STUDENT`), route protection, and data isolation between accounts.
+
+
