@@ -11,16 +11,18 @@ router.use(authenticateToken);
 
 /**
  * GET /api/jobs
- * Get all visible jobs for the user (Public catalog + user created)
+ * Get ONLY user-created jobs (not shared catalog)
+ * Users must explicitly browse /api/jobs/public to access shared opportunities
  */
 router.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) return;
-    const jobs = await jobService.getVisibleJobs(req.user.userId);
+    const jobs = await jobService.getUserPrivateJobs(req.user.userId);
     res.status(200).json({
       success: true,
       count: jobs.length,
       data: jobs,
+      message: 'User-created job opportunities',
       timestamp: new Date().toISOString(),
     });
   } catch (err) {

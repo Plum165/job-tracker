@@ -4,9 +4,16 @@ import { IdentifierType, User, UserRole } from '../types/auth';
 
 class UserRepository {
   private inMemoryFallbackUsers: Map<string, User> = new Map();
+  private initializationPromise: Promise<void>;
 
   constructor() {
-    this.initDefaultUsers();
+    // Initialize and cache the promise so we can await it later
+    this.initializationPromise = this.initDefaultUsers();
+  }
+
+  // Ensure initialization is complete before operations
+  private async ensureInitialized(): Promise<void> {
+    return this.initializationPromise;
   }
 
   private async initDefaultUsers() {
@@ -98,6 +105,9 @@ class UserRepository {
    * Find user by specific identifier based on detected type in PostgreSQL
    */
   async findByIdentifier(identifier: string, type: IdentifierType): Promise<User | null> {
+    // Ensure initialization is complete
+    await this.ensureInitialized();
+
     const cleanId = identifier.trim();
 
     try {
@@ -185,6 +195,9 @@ class UserRepository {
   }
 
   async findByEmailOrUsername(email: string, username: string): Promise<User | null> {
+    // Ensure initialization is complete
+    await this.ensureInitialized();
+
     const cleanEmail = email.trim();
     const cleanUsername = username.trim();
 

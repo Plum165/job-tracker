@@ -27,7 +27,7 @@ export class AuthService {
     const { identifier, password } = dto;
 
     if (!identifier || !password) {
-      throw new Error('Identifier and password are required');
+      throw new AppError('Identifier and password are required', 400);
     }
 
     // 1. Detect Identifier Type
@@ -36,13 +36,13 @@ export class AuthService {
     // 2. Query Repository with detected type
     const user = await userRepository.findByIdentifier(identifier, detectedType);
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new AppError('Invalid credentials', 401);
     }
 
     // 3. Verify Password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+      throw new AppError('Invalid credentials', 401);
     }
 
     // 4. Generate Access & Refresh Tokens
@@ -68,13 +68,13 @@ export class AuthService {
     const { fullName, email, username, password, role = 'STUDENT', studentId, employeeId } = dto;
 
     if (!email || !username || !password || !fullName) {
-      throw new Error('Full name, email, username, and password are required');
+      throw new AppError('Full name, email, username, and password are required', 400);
     }
 
     // Check existing
     const existing = await userRepository.findByEmailOrUsername(email, username);
     if (existing) {
-      throw new Error('User with this email or username already exists');
+      throw new AppError('User with this email or username already exists', 409);
     }
 
     // Hash Password
