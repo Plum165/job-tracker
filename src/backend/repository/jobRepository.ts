@@ -10,6 +10,66 @@ class JobRepository {
     DEFAULT_SHARED_OPPORTUNITIES.forEach((opp) => {
       this.fallbackJobs.set(opp.id, opp);
     });
+
+    // Asynchronously seed default opportunities into database on startup
+    this.seedDefaultOpportunities();
+  }
+
+  /**
+   * Seed default shared opportunities into PostgreSQL on startup
+   * This prevents foreign key constraint violations when users access these opportunities
+   */
+  private async seedDefaultOpportunities(): Promise<void> {
+    try {
+      for (const opp of DEFAULT_SHARED_OPPORTUNITIES) {
+        await prisma.jobOpportunity.upsert({
+          where: { id: opp.id },
+          update: {
+            companyName: opp.companyName,
+            companyLogo: opp.companyLogo || null,
+            jobTitle: opp.jobTitle,
+            jobCategory: opp.jobCategory,
+            companyDescription: opp.companyDescription || '',
+            companyWebsite: opp.companyWebsite || '',
+            applicationLink: opp.applicationLink || '',
+            location: opp.location,
+            workArrangement: opp.workArrangement,
+            employmentType: opp.employmentType,
+            openingDate: opp.openingDate || null,
+            closingDate: opp.closingDate,
+            generalNotes: opp.generalNotes || null,
+            tags: JSON.stringify(opp.tags),
+            isShared: opp.isShared,
+            createdById: null, // Shared opportunities have no creator
+          },
+          create: {
+            id: opp.id,
+            companyName: opp.companyName,
+            companyLogo: opp.companyLogo || null,
+            jobTitle: opp.jobTitle,
+            jobCategory: opp.jobCategory,
+            companyDescription: opp.companyDescription || '',
+            companyWebsite: opp.companyWebsite || '',
+            applicationLink: opp.applicationLink || '',
+            location: opp.location,
+            workArrangement: opp.workArrangement,
+            employmentType: opp.employmentType,
+            dateAdded: new Date(opp.dateAdded),
+            openingDate: opp.openingDate || null,
+            closingDate: opp.closingDate,
+            generalNotes: opp.generalNotes || null,
+            tags: JSON.stringify(opp.tags),
+            isShared: opp.isShared,
+            createdById: null,
+          },
+        });
+      }
+    } catch (err) {
+      console.warn(
+        'Warning: Could not seed default opportunities to database on startup. Using in-memory fallback.',
+        err
+      );
+    }
   }
 
   /**

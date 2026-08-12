@@ -1,7 +1,8 @@
 import { prisma } from '../lib/prisma';
 import { ApplicationStatus, UserApplicationState } from '../../types';
-import { DEFAULT_INITIAL_PRIVATE_STATES } from '../../data/defaultCatalog';
+import { DEFAULT_INITIAL_PRIVATE_STATES, DEFAULT_SHARED_OPPORTUNITIES } from '../../data/defaultCatalog';
 import { createDefaultApplicationState } from '../../lib/storage';
+import { jobRepository } from './jobRepository';
 
 class ApplicationRepository {
   // Key format: `${userId}:${opportunityId}`
@@ -78,6 +79,7 @@ class ApplicationRepository {
 
   /**
    * Save / Upsert application state for a user and opportunity
+   * Lazily seeds default opportunities if they don't exist
    */
   async saveApplicationState(userId: string, state: UserApplicationState): Promise<UserApplicationState> {
     const fallbackKey = `${userId}:${state.opportunityId}`;
@@ -89,6 +91,45 @@ class ApplicationRepository {
     this.fallbackStates.set(fallbackKey, updatedState);
 
     try {
+      // Pre-check: ensure the opportunity exists in the database
+      // This prevents foreign key constraint violations
+      let opportunityExists = false;
+      try {
+        const existing = await prisma.jobOpportunity.findUnique({
+          where: { id: state.opportunityId },
+          select: { id: true },
+        });
+        opportunityExists = !!existing;
+      } catch (err) {
+        // If query fails, assume it doesn't exist
+        opportunityExists = false;
+      }
+
+      // If opportunity doesn't exist, try to create it from default catalog
+      if (!opportunityExists) {
+        const defaultOpp = DEFAULT_SHARED_OPPORTUNITIES.find(
+          (opp) => opp.id === state.opportunityId
+        );
+
+        if (defaultOpp) {
+          // Lazy-seed the default opportunity into the database
+          try {
+            await jobRepository.createJob({
+              ...defaultOpp,
+              createdById: null, // Shared opportunities have no creator
+            });
+            opportunityExists = true;
+          } catch (err) {
+            // If creation fails, continue - the upsert will fail with better error message
+            console.warn(
+              `Warning: Could not seed default opportunity ${state.opportunityId}:`,
+              err
+            );
+          }
+        }
+      }
+
+      // Now attempt the upsert
       const dbState = await prisma.userApplicationState.upsert({
         where: {
           userId_opportunityId: { userId, opportunityId: state.opportunityId },
@@ -119,6 +160,11 @@ class ApplicationRepository {
 
       return this.mapPrismaState(dbState);
     } catch (err) {
+      // Foreign key or other constraint violations fall back to in-memory state
+      console.warn(
+        `Warning: Could not persist application state to database, using in-memory cache:`,
+        err
+      );
       return updatedState;
     }
   }
