@@ -1,11 +1,28 @@
--- Repair users table
-ALTER TABLE "users"
-ADD COLUMN IF NOT EXISTS "avatarUrl" TEXT,
-ADD COLUMN IF NOT EXISTS "bio" TEXT,
-ADD COLUMN IF NOT EXISTS "preferences" TEXT DEFAULT '{}',
-ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+-- Sync Prisma schema with PostgreSQL database
+-- This migration ensures all tables and columns exist with correct types and constraints
 
--- Create job opportunities table
+-- 1. Update users table to include profile fields
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='avatarUrl') THEN
+    ALTER TABLE "users" ADD COLUMN "avatarUrl" TEXT;
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='bio') THEN
+    ALTER TABLE "users" ADD COLUMN "bio" TEXT;
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='preferences') THEN
+    ALTER TABLE "users" ADD COLUMN "preferences" TEXT DEFAULT '{}';
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='updatedAt') THEN
+    ALTER TABLE "users" ADD COLUMN "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+  END IF;
+END
+$$;
+
+-- 2. Create job opportunities table if it doesn't exist
 CREATE TABLE IF NOT EXISTS "job_opportunities" (
     "id" TEXT NOT NULL,
     "companyName" TEXT NOT NULL,
@@ -29,7 +46,7 @@ CREATE TABLE IF NOT EXISTS "job_opportunities" (
     CONSTRAINT "job_opportunities_pkey" PRIMARY KEY ("id")
 );
 
--- Create user application states table
+-- 3. Create user application states table if it doesn't exist
 CREATE TABLE IF NOT EXISTS "user_application_states" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -47,7 +64,7 @@ CREATE TABLE IF NOT EXISTS "user_application_states" (
     CONSTRAINT "user_application_states_pkey" PRIMARY KEY ("id")
 );
 
--- Create contacts table
+-- 4. Create contacts table if it doesn't exist
 CREATE TABLE IF NOT EXISTS "contacts" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -68,35 +85,71 @@ CREATE TABLE IF NOT EXISTS "contacts" (
     CONSTRAINT "contacts_pkey" PRIMARY KEY ("id")
 );
 
--- Foreign keys
-ALTER TABLE "job_opportunities"
-ADD CONSTRAINT "job_opportunities_createdById_fkey"
-FOREIGN KEY ("createdById")
-REFERENCES "users"("id")
-ON DELETE SET NULL
-ON UPDATE CASCADE;
+-- 5. Add foreign key constraints (using DO block to check existence)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE table_name='job_opportunities' AND constraint_name='job_opportunities_createdById_fkey'
+  ) THEN
+    ALTER TABLE "job_opportunities"
+    ADD CONSTRAINT "job_opportunities_createdById_fkey"
+    FOREIGN KEY ("createdById")
+    REFERENCES "users"("id")
+    ON DELETE SET NULL
+    ON UPDATE CASCADE;
+  END IF;
+END
+$$;
 
-ALTER TABLE "user_application_states"
-ADD CONSTRAINT "user_application_states_userId_fkey"
-FOREIGN KEY ("userId")
-REFERENCES "users"("id")
-ON DELETE CASCADE
-ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE table_name='user_application_states' AND constraint_name='user_application_states_userId_fkey'
+  ) THEN
+    ALTER TABLE "user_application_states"
+    ADD CONSTRAINT "user_application_states_userId_fkey"
+    FOREIGN KEY ("userId")
+    REFERENCES "users"("id")
+    ON DELETE CASCADE
+    ON UPDATE CASCADE;
+  END IF;
+END
+$$;
 
-ALTER TABLE "user_application_states"
-ADD CONSTRAINT "user_application_states_opportunityId_fkey"
-FOREIGN KEY ("opportunityId")
-REFERENCES "job_opportunities"("id")
-ON DELETE CASCADE
-ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE table_name='user_application_states' AND constraint_name='user_application_states_opportunityId_fkey'
+  ) THEN
+    ALTER TABLE "user_application_states"
+    ADD CONSTRAINT "user_application_states_opportunityId_fkey"
+    FOREIGN KEY ("opportunityId")
+    REFERENCES "job_opportunities"("id")
+    ON DELETE CASCADE
+    ON UPDATE CASCADE;
+  END IF;
+END
+$$;
 
-ALTER TABLE "contacts"
-ADD CONSTRAINT "contacts_userId_fkey"
-FOREIGN KEY ("userId")
-REFERENCES "users"("id")
-ON DELETE CASCADE
-ON UPDATE CASCADE;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE table_name='contacts' AND constraint_name='contacts_userId_fkey'
+  ) THEN
+    ALTER TABLE "contacts"
+    ADD CONSTRAINT "contacts_userId_fkey"
+    FOREIGN KEY ("userId")
+    REFERENCES "users"("id")
+    ON DELETE CASCADE
+    ON UPDATE CASCADE;
+  END IF;
+END
+$$;
 
--- Unique application per user/job
+-- 6. Create unique indexes (idempotent)
 CREATE UNIQUE INDEX IF NOT EXISTS "user_application_states_userId_opportunityId_key"
 ON "user_application_states"("userId", "opportunityId");

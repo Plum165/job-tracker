@@ -42,7 +42,7 @@ class JobRepository {
         orderBy: { dateAdded: 'desc' },
       });
       if (dbJobs.length > 0) {
-        return dbJobs.map((j) => this.mapPrismaJob(j));
+        return dbJobs.map((j: any) => this.mapPrismaJob(j));
       }
     } catch (err) {
       // Fallback to in-memory map
@@ -68,7 +68,7 @@ class JobRepository {
         orderBy: { dateAdded: 'desc' },
       });
       if (dbJobs.length > 0) {
-        return dbJobs.map((j) => this.mapPrismaJob(j));
+        return dbJobs.map((j: any) => this.mapPrismaJob(j));
       }
     } catch (err) {
       // Fallback
@@ -91,7 +91,7 @@ class JobRepository {
         orderBy: { dateAdded: 'desc' },
       });
       if (dbJobs.length > 0) {
-        return dbJobs.map((j) => this.mapPrismaJob(j));
+        return dbJobs.map((j: any) => this.mapPrismaJob(j));
       }
     } catch (err) {
       // Fallback
@@ -234,6 +234,7 @@ class JobRepository {
       generalNotes: u.generalNotes || undefined,
       tags: parsedTags,
       isShared: u.isShared,
+      createdById: u.createdById || undefined,
     };
   }
 }

@@ -1,7 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
 import { IdentifierType, User, UserRole } from '../types/auth';
-import { Role } from '@prisma/client';
 
 class UserRepository {
   private inMemoryFallbackUsers: Map<string, User> = new Map();
@@ -74,7 +73,7 @@ class UserRepository {
             studentId: user.studentId,
             employeeId: user.employeeId,
             fullName: user.fullName,
-            role: user.role as Role,
+            role: user.role,
             passwordHash: user.passwordHash,
           },
           create: {
@@ -84,7 +83,7 @@ class UserRepository {
             studentId: user.studentId,
             employeeId: user.employeeId,
             fullName: user.fullName,
-            role: user.role as Role,
+            role: user.role,
             passwordHash: user.passwordHash,
             createdAt: new Date(user.createdAt),
           },
@@ -230,7 +229,7 @@ class UserRepository {
           studentId: user.studentId,
           employeeId: user.employeeId,
           fullName: user.fullName,
-          role: user.role as Role,
+          role: user.role,
           passwordHash: user.passwordHash,
           createdAt: user.createdAt ? new Date(user.createdAt) : new Date(),
         },
@@ -267,7 +266,7 @@ class UserRepository {
           avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : undefined,
           bio: data.bio !== undefined ? data.bio : undefined,
           preferences: data.preferences !== undefined ? data.preferences : undefined,
-          role: data.role !== undefined ? (data.role as Role) : undefined,
+          role: data.role !== undefined ? data.role : undefined,
           passwordHash: data.passwordHash !== undefined ? data.passwordHash : undefined,
         },
       });
@@ -305,7 +304,7 @@ class UserRepository {
         orderBy: { createdAt: 'desc' },
       });
       if (users.length > 0) {
-        return users.map((u) => {
+        return users.map((u: any) => {
           const mapped = this.mapPrismaUserToAuthUser(u);
           const { passwordHash, ...rest } = mapped;
           return rest;

@@ -45,6 +45,7 @@ export interface JobOpportunity {
   generalNotes?: string;
   tags: string[];
   isShared: boolean;
+  createdById?: string; // User ID of job creator, null for shared catalog items
 }
 
 export interface InterviewRecord {
