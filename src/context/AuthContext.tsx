@@ -96,135 +96,88 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (identifier: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const cleanId = identifier.trim();
+ const login = async (identifier: string, password: string) => {
+  setIsLoading(true);
 
-      // Client-side instant bypass for demo user SMSMOE006 / 1234
-      if (cleanId.toUpperCase() === 'SMSMOE006' && password === '1234') {
-        const demoUser: Omit<User, 'passwordHash'> = {
-          id: 'usr-smsmoe006',
-          fullName: 'SMSMOE006 (Demo Lead)',
-          email: 'smsmoe006@enterprise.io',
-          username: 'SMSMOE006',
-          role: 'ADMIN',
-          studentId: 'STU006',
-          employeeId: 'EMP006',
-          createdAt: new Date().toISOString(),
-        };
+  try {
+    const cleanId = identifier.trim();
 
-        const demoTokens: AuthTokens = {
-          accessToken: 'demo_access_token_smsmoe006_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
-          refreshToken: 'demo_refresh_token_smsmoe006_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9',
-          expiresIn: 3600,
-        };
+    const res = await apiClient.post('/api/auth/login', {
+      identifier: cleanId,
+      password,
+    });
 
-        setUser(demoUser);
-        setTokens(demoTokens);
-        setLastDetectedIdentifierType('USERNAME');
-        TokenStorage.setUser(demoUser as any);
-        TokenStorage.setTokens(demoTokens);
-        return;
-      }
+    const data = res.data.data;
 
-      // API Login via apiClient
-      try {
-        const res = await apiClient.post('/api/auth/login', { identifier, password });
-        const data = res.data.data;
-
-        setUser(data.user);
-        setTokens(data.tokens);
-        setLastDetectedIdentifierType(data.detectedIdentifierType);
-        TokenStorage.setUser(data.user);
-        TokenStorage.setTokens(data.tokens);
-        fetchSessions();
-      } catch (err: any) {
-        const message = err.response?.data?.message || err.message || 'Authentication failed';
-
-        // Fallback for demo testing if backend is offline or mock environment
-        if (password === '1234' || password === 'Password123!') {
-          const detectedType = detectIdentifier(identifier);
-          const fallbackUser: Omit<User, 'passwordHash'> = {
-            id: `usr-${Date.now()}`,
-            fullName: `${cleanId} (Session User)`,
-            email: cleanId.includes('@') ? cleanId : `${cleanId.toLowerCase()}@enterprise.io`,
-            username: cleanId,
-            role: 'ADMIN',
-            createdAt: new Date().toISOString(),
-          };
-          const fallbackTokens: AuthTokens = {
-            accessToken: `local_access_token_${Date.now()}`,
-            refreshToken: `local_refresh_token_${Date.now()}`,
-            expiresIn: 3600,
-          };
-          setUser(fallbackUser);
-          setTokens(fallbackTokens);
-          setLastDetectedIdentifierType(detectedType);
-          TokenStorage.setUser(fallbackUser as any);
-          TokenStorage.setTokens(fallbackTokens);
-          return;
-        }
-
-        throw new Error(message);
-      }
-    } finally {
-      setIsLoading(false);
+    if (!data?.user || !data?.tokens) {
+      throw new Error(
+        'Login succeeded but the server did not return authentication tokens.'
+      );
     }
-  };
+
+    setUser(data.user);
+    setTokens(data.tokens);
+    setLastDetectedIdentifierType(data.detectedIdentifierType);
+
+    TokenStorage.setUser(data.user);
+    TokenStorage.setTokens(data.tokens);
+
+    await fetchSessions();
+  } catch (err: any) {
+    const message =
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      err.message ||
+      'Authentication failed';
+
+    throw new Error(message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const signup = async (data: {
-    fullName: string;
-    email: string;
-    username: string;
-    password: string;
-    role?: UserRole;
-    studentId?: string;
-    employeeId?: string;
-  }) => {
-    setIsLoading(true);
-    try {
-      try {
-        const res = await apiClient.post('/api/auth/signup', data);
-        const resData = res.data.data;
+  fullName: string;
+  email: string;
+  username: string;
+  password: string;
+  role?: UserRole;
+  studentId?: string;
+  employeeId?: string;
+}) => {
+  setIsLoading(true);
 
-        setUser(resData.user);
-        setTokens(resData.tokens);
-        setLastDetectedIdentifierType(resData.detectedIdentifierType);
-        TokenStorage.setUser(resData.user);
-        TokenStorage.setTokens(resData.tokens);
-      } catch (err: any) {
-        const message = err.response?.data?.message || err.message || 'Registration failed';
+  try {
+    const res = await apiClient.post('/api/auth/signup', data);
 
-        if (!message.toLowerCase().includes('exists') && !message.toLowerCase().includes('already')) {
-          const newUser: Omit<User, 'passwordHash'> = {
-            id: `usr-${Date.now()}`,
-            fullName: data.fullName,
-            email: data.email,
-            username: data.username,
-            role: data.role || 'STUDENT',
-            studentId: data.studentId,
-            employeeId: data.employeeId,
-            createdAt: new Date().toISOString(),
-          };
-          const newTokens: AuthTokens = {
-            accessToken: `local_access_token_${Date.now()}`,
-            refreshToken: `local_refresh_token_${Date.now()}`,
-            expiresIn: 3600,
-          };
-          setUser(newUser);
-          setTokens(newTokens);
-          TokenStorage.setUser(newUser as any);
-          TokenStorage.setTokens(newTokens);
-          return;
-        }
+    const resData = res.data.data;
 
-        throw new Error(message);
-      }
-    } finally {
-      setIsLoading(false);
+    if (!resData?.user || !resData?.tokens) {
+      throw new Error(
+        'Signup succeeded but the server did not return authentication tokens.'
+      );
     }
-  };
+
+    setUser(resData.user);
+    setTokens(resData.tokens);
+    setLastDetectedIdentifierType(resData.detectedIdentifierType);
+
+    TokenStorage.setUser(resData.user);
+    TokenStorage.setTokens(resData.tokens);
+
+    await fetchSessions();
+  } catch (err: any) {
+    const message =
+      err.response?.data?.message ||
+      err.response?.data?.error ||
+      err.message ||
+      'Registration failed';
+
+    throw new Error(message);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const refreshTokens = async () => {
     const currentTokens = TokenStorage.getTokens();
