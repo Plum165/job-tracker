@@ -34,15 +34,15 @@ export const signupSchema = z.object({
   studentId: z
     .string()
     .trim()
-    .regex(/^STU\d{3,}$/i, 'Student ID must follow format STUxxx (e.g. STU54321)')
     .optional()
-    .or(z.literal('')),
+    .nullable()
+    .transform(val => val && val.length > 0 ? val : undefined),
   employeeId: z
     .string()
     .trim()
-    .regex(/^EMP\d{3,}$/i, 'Employee ID must follow format EMPxxx (e.g. EMP808)')
     .optional()
-    .or(z.literal('')),
+    .nullable()
+    .transform(val => val && val.length > 0 ? val : undefined),
 });
 
 export const refreshTokenSchema = z.object({

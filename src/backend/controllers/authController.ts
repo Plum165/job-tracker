@@ -36,10 +36,27 @@ router.post('/login', validateRequest(loginSchema), async (req, res, next: NextF
  */
 router.post('/signup', validateRequest(signupSchema), async (req, res, next: NextFunction) => {
   try {
+    const { fullName, email, username, password, role, studentId, employeeId } = req.body;
+
+    // Validate required fields
+    if (!fullName || !email || !username || !password) {
+      res.status(400).json({
+        success: false,
+        error: 'Validation Error',
+        message: 'Missing required fields: fullName, email, username, password',
+        timestamp: new Date().toISOString(),
+      });
+      return;
+    }
+
     const ipAddress = req.ip || req.socket.remoteAddress;
     const userAgent = req.headers['user-agent'];
 
-    const result = await authService.signup(req.body, ipAddress, userAgent);
+    const result = await authService.signup(
+      { fullName, email, username, password, role, studentId, employeeId },
+      ipAddress,
+      userAgent
+    );
 
     res.status(201).json({
       success: true,

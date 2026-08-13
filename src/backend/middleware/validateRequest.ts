@@ -11,14 +11,23 @@ export function validateRequest(schema: ZodSchema) {
         const issues = error.issues || (error as any).errors || [];
         const formattedErrors = issues.map((err: any) => ({
           field: err.path ? err.path.join('.') : 'payload',
+          code: err.code,
           message: err.message,
         }));
+
+        console.warn('Validation error on request:', {
+          path: req.path,
+          method: req.method,
+          errors: formattedErrors,
+          body: req.body,
+        });
 
         res.status(400).json({
           success: false,
           error: 'Validation Error',
           message: 'Request payload failed schema validation checks',
           details: formattedErrors,
+          timestamp: new Date().toISOString(),
         });
         return;
       }
