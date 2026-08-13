@@ -178,6 +178,9 @@ class UserRepository {
   }
 
   async findById(userId: string): Promise<User | null> {
+    // Ensure initialization is complete
+    await this.ensureInitialized();
+
     try {
       const dbUser = await prisma.user.findUnique({
         where: { id: userId },
@@ -231,6 +234,9 @@ class UserRepository {
   }
 
   async createUser(user: User): Promise<User> {
+    // Ensure initialization is complete before creating user
+    await this.ensureInitialized();
+
     this.inMemoryFallbackUsers.set(user.id, { ...user });
 
     try {
@@ -239,8 +245,8 @@ class UserRepository {
           id: user.id,
           email: user.email,
           username: user.username,
-          studentId: user.studentId,
-          employeeId: user.employeeId,
+          studentId: user.studentId || null,
+          employeeId: user.employeeId || null,
           fullName: user.fullName,
           role: user.role,
           passwordHash: user.passwordHash,
@@ -250,12 +256,16 @@ class UserRepository {
 
       return this.mapPrismaUserToAuthUser(created);
     } catch (err) {
-      console.warn('PostgreSQL write bypassed, stored in memory cache:', err);
+      console.error('Error creating user in database:', err);
+      console.warn('PostgreSQL write bypassed, stored in memory cache');
       return { ...user };
     }
   }
 
   async updateUser(userId: string, data: Partial<User>): Promise<User> {
+    // Ensure initialization is complete
+    await this.ensureInitialized();
+
     const existing = await this.findById(userId);
     if (!existing) {
       throw new Error(`User with ID '${userId}' not found`);
@@ -312,6 +322,9 @@ class UserRepository {
   }
 
   async getAllUsers(): Promise<Omit<User, 'passwordHash'>[]> {
+    // Ensure initialization is complete
+    await this.ensureInitialized();
+
     try {
       const users = await prisma.user.findMany({
         orderBy: { createdAt: 'desc' },

@@ -71,28 +71,49 @@ export class AuthService {
       throw new AppError('Full name, email, username, and password are required', 400);
     }
 
-    // Check existing
-    const existing = await userRepository.findByEmailOrUsername(email, username);
-    if (existing) {
-      throw new AppError('User with this email or username already exists', 409);
+    // Check existing user
+    let existing: any = null;
+    try {
+      existing = await userRepository.findByEmailOrUsername(email, username);
+    } catch (err) {
+      console.error('Error checking existing user:', err);
+      throw new AppError('Database error while checking user availability', 500);
     }
 
-    // Hash Password
-    const passwordHash = await bcrypt.hash(password, 10);
+    if (existing) {
+      throw new AppError(`User with email "${email}" or username "${username}" already exists`, 409);
+    }
+
+    // Hash password
+    let passwordHash: string;
+    try {
+      passwordHash = await bcrypt.hash(password, 10);
+    } catch (err) {
+      console.error('Error hashing password:', err);
+      throw new AppError('Failed to process password', 500);
+    }
 
     const newUser: User = {
-      id: `usr-${Date.now()}`,
+      id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       fullName,
       email,
       username,
-      studentId: studentId || (email.toLowerCase().includes('student') ? `STU${Math.floor(10000 + Math.random() * 90000)}` : undefined),
-      employeeId: employeeId || (email.toLowerCase().includes('emp') ? `EMP${Math.floor(100 + Math.random() * 900)}` : undefined),
+      studentId: studentId && studentId.trim() ? studentId.trim() : undefined,
+      employeeId: employeeId && employeeId.trim() ? employeeId.trim() : undefined,
       role,
       passwordHash,
       createdAt: new Date().toISOString(),
     };
 
-    const created = await userRepository.createUser(newUser);
+    // Create the user
+    let created: User;
+    try {
+      created = await userRepository.createUser(newUser);
+    } catch (err) {
+      console.error('Error creating user:', err);
+      throw new AppError('Failed to create user account', 500);
+    }
+
     const detectedType = detectIdentifierType(email);
 
     const { accessToken, refreshToken } = await this.generateTokenPair(created, ipAddress, userAgent);
