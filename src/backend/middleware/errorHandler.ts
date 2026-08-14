@@ -20,7 +20,6 @@ export function errorHandler(
   next: NextFunction
 ): void {
   const statusCode = err.statusCode || err.status || 500;
-  const isProd = process.env.NODE_ENV === 'production';
 
   // Specific JWT Error Handling
   if (err.name === 'TokenExpiredError') {
@@ -59,10 +58,12 @@ export function errorHandler(
   // Zod Validation Error Handling
   if (err instanceof ZodError) {
     const issues = err.issues || (err as any).errors || [];
+    const firstMessage = issues[0]?.message || 'Invalid payload submitted';
+
     res.status(400).json({
       success: false,
       error: 'Validation Error',
-      message: 'Invalid payload submitted',
+      message: firstMessage,
       details: issues.map((e: any) => ({
         field: e.path ? e.path.join('.') : 'payload',
         message: e.message,
@@ -96,13 +97,16 @@ export function errorHandler(
   }
 
   // Generic 500 Internal Server Error
-  console.error('Unhandled System Exception:', err);
+  console.error('Unhandled System Exception:', {
+    path: req.path,
+    method: req.method,
+    message: err?.message || 'Unknown error',
+  });
 
   res.status(statusCode).json({
     success: false,
     error: statusCode >= 500 ? 'Internal Server Error' : 'Bad Request',
-    message: isProd && statusCode >= 500 ? 'An unexpected system error occurred' : err.message || 'Error processing request',
-    ...(isProd ? {} : { stack: err.stack }),
+    message: statusCode >= 500 ? 'An unexpected system error occurred' : err.message || 'Error processing request',
     timestamp: new Date().toISOString(),
   });
 }

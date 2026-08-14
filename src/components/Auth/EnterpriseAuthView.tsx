@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { IdentifierType } from '../../backend/types/auth';
 import { UserProfileView } from './UserProfileView';
+import { validateLoginForm, validateSignupForm } from '../../lib/authValidation';
 
 export const EnterpriseAuthView: React.FC = () => {
   const {
@@ -52,6 +53,7 @@ export const EnterpriseAuthView: React.FC = () => {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupUsername, setSignupUsername] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [signupRole, setSignupRole] = useState<'STUDENT' | 'EMPLOYEE' | 'ADMIN'>('STUDENT');
   const [signupStudentId, setSignupStudentId] = useState('');
   const [signupEmployeeId, setSignupEmployeeId] = useState('');
@@ -67,29 +69,51 @@ export const EnterpriseAuthView: React.FC = () => {
     e.preventDefault();
     setLoginError(null);
     setLoginSuccessMsg(null);
+
+    const validationMessage = validateLoginForm(identifier, password);
+    if (validationMessage) {
+      setLoginError(validationMessage);
+      return;
+    }
+
     try {
       await login(identifier, password);
       setLoginSuccessMsg(`Successfully authenticated via ${detectedType} identifier!`);
     } catch (err: any) {
-      setLoginError(err.message || 'Login failed');
+      setLoginError(err?.message || 'Login failed');
     }
   };
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError(null);
+
+    const validationMessage = validateSignupForm({
+      fullName: signupFullName,
+      email: signupEmail,
+      username: signupUsername,
+      password: signupPassword,
+      confirmPassword: signupConfirmPassword,
+    });
+
+    if (validationMessage) {
+      setSignupError(validationMessage);
+      return;
+    }
+
     try {
       await signup({
         fullName: signupFullName,
         email: signupEmail,
         username: signupUsername,
         password: signupPassword,
+        confirmPassword: signupConfirmPassword,
         role: signupRole,
         studentId: signupStudentId || undefined,
         employeeId: signupEmployeeId || undefined,
       });
     } catch (err: any) {
-      setSignupError(err.message || 'Signup failed');
+      setSignupError(err?.message || 'Signup failed');
     }
   };
 
@@ -330,7 +354,7 @@ export const EnterpriseAuthView: React.FC = () => {
                   className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-colors cursor-pointer flex items-center justify-center gap-2 min-h-[44px]"
                 >
                   {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <ShieldCheck className="w-4 h-4" />}
-                  <span>Authenticate Session</span>
+                  <span>{isLoading ? 'Signing in...' : 'Authenticate Session'}</span>
                 </button>
               </form>
             )}
@@ -423,9 +447,23 @@ export const EnterpriseAuthView: React.FC = () => {
                   <input
                     type="password"
                     required
-                    placeholder="Min 8 characters"
+                    placeholder="Min 6 characters"
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
+                    className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Re-enter your password"
+                    value={signupConfirmPassword}
+                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
                     className="w-full p-2.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100"
                   />
                 </div>
@@ -442,7 +480,7 @@ export const EnterpriseAuthView: React.FC = () => {
                   disabled={isLoading}
                   className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md transition-colors cursor-pointer min-h-[44px]"
                 >
-                  Create & Issue JWT Tokens
+                  {isLoading ? 'Creating account...' : 'Create & Issue JWT Tokens'}
                 </button>
               </form>
             )}

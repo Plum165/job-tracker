@@ -15,6 +15,7 @@ interface AuthContextType {
     email: string;
     username: string;
     password: string;
+    confirmPassword?: string;
     role?: UserRole;
     studentId?: string;
     employeeId?: string;
@@ -97,88 +98,116 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
  const login = async (identifier: string, password: string) => {
-  setIsLoading(true);
+    setIsLoading(true);
 
-  try {
-    const cleanId = identifier.trim();
+    try {
+      const cleanId = identifier.trim();
 
-    const res = await apiClient.post('/api/auth/login', {
-      identifier: cleanId,
-      password,
-    });
+      if (!cleanId) {
+        throw new Error('Email or username is required.');
+      }
 
-    const data = res.data.data;
+      if (typeof password !== 'string' || password.trim().length === 0) {
+        throw new Error('Password is required.');
+      }
 
-    if (!data?.user || !data?.tokens) {
-      throw new Error(
-        'Login succeeded but the server did not return authentication tokens.'
-      );
+      if (password.length < 6) {
+        throw new Error('Password must be at least 6 characters long.');
+      }
+
+      const res = await apiClient.post('/api/auth/login', {
+        identifier: cleanId,
+        password,
+      });
+
+      const data = res.data.data;
+
+      if (!data?.user || !data?.tokens) {
+        throw new Error('Login succeeded but the server did not return authentication tokens.');
+      }
+
+      setUser(data.user);
+      setTokens(data.tokens);
+      setLastDetectedIdentifierType(data.detectedIdentifierType);
+
+      TokenStorage.setUser(data.user);
+      TokenStorage.setTokens(data.tokens);
+
+      await fetchSessions();
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Authentication failed';
+
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
     }
-
-    setUser(data.user);
-    setTokens(data.tokens);
-    setLastDetectedIdentifierType(data.detectedIdentifierType);
-
-    TokenStorage.setUser(data.user);
-    TokenStorage.setTokens(data.tokens);
-
-    await fetchSessions();
-  } catch (err: any) {
-    const message =
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      err.message ||
-      'Authentication failed';
-
-    throw new Error(message);
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const signup = async (data: {
-  fullName: string;
-  email: string;
-  username: string;
-  password: string;
-  role?: UserRole;
-  studentId?: string;
-  employeeId?: string;
-}) => {
-  setIsLoading(true);
+    fullName: string;
+    email: string;
+    username: string;
+    password: string;
+    confirmPassword?: string;
+    role?: UserRole;
+    studentId?: string;
+    employeeId?: string;
+  }) => {
+    setIsLoading(true);
 
-  try {
-    const res = await apiClient.post('/api/auth/signup', data);
+    try {
+      if (!data.fullName?.trim()) {
+        throw new Error('Full name is required.');
+      }
 
-    const resData = res.data.data;
+      if (!data.email?.trim()) {
+        throw new Error('Email is required.');
+      }
 
-    if (!resData?.user || !resData?.tokens) {
-      throw new Error(
-        'Signup succeeded but the server did not return authentication tokens.'
-      );
+      if (!data.username?.trim()) {
+        throw new Error('Username is required.');
+      }
+
+      if (data.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long.');
+      }
+
+      if (data.confirmPassword !== undefined && data.confirmPassword !== data.password) {
+        throw new Error('Passwords do not match.');
+      }
+
+      const res = await apiClient.post('/api/auth/signup', data);
+
+      const resData = res.data.data;
+
+      if (!resData?.user || !resData?.tokens) {
+        throw new Error('Signup succeeded but the server did not return authentication tokens.');
+      }
+
+      setUser(resData.user);
+      setTokens(resData.tokens);
+      setLastDetectedIdentifierType(resData.detectedIdentifierType);
+
+      TokenStorage.setUser(resData.user);
+      TokenStorage.setTokens(resData.tokens);
+
+      await fetchSessions();
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Registration failed';
+
+      throw new Error(message);
+    } finally {
+      setIsLoading(false);
     }
-
-    setUser(resData.user);
-    setTokens(resData.tokens);
-    setLastDetectedIdentifierType(resData.detectedIdentifierType);
-
-    TokenStorage.setUser(resData.user);
-    TokenStorage.setTokens(resData.tokens);
-
-    await fetchSessions();
-  } catch (err: any) {
-    const message =
-      err.response?.data?.message ||
-      err.response?.data?.error ||
-      err.message ||
-      'Registration failed';
-
-    throw new Error(message);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
   const refreshTokens = async () => {
     const currentTokens = TokenStorage.getTokens();
     if (!currentTokens?.refreshToken) return;

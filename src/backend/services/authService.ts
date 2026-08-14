@@ -30,6 +30,14 @@ export class AuthService {
       throw new AppError('Identifier and password are required', 400);
     }
 
+    if (typeof password !== 'string' || password.trim().length === 0) {
+      throw new AppError('Password is required', 400);
+    }
+
+    if (password.length < 6) {
+      throw new AppError('Password must be at least 6 characters long', 400);
+    }
+
     // 1. Detect Identifier Type
     const detectedType = detectIdentifierType(identifier);
 
@@ -65,10 +73,18 @@ export class AuthService {
    * Register a new user
    */
   async signup(dto: SignupDTO, ipAddress?: string, userAgent?: string): Promise<AuthSuccessResponse> {
-    const { fullName, email, username, password, role = 'STUDENT', studentId, employeeId } = dto;
+    const { fullName, email, username, password, confirmPassword, role = 'STUDENT', studentId, employeeId } = dto;
 
     if (!email || !username || !password || !fullName) {
       throw new AppError('Full name, email, username, and password are required', 400);
+    }
+
+    if (password.length < 6) {
+      throw new AppError('Password must be at least 6 characters long', 400);
+    }
+
+    if (confirmPassword !== undefined && confirmPassword !== password) {
+      throw new AppError('Passwords do not match', 400);
     }
 
     // Check existing user

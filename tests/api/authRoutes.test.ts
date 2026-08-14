@@ -10,6 +10,7 @@ describe('API Test: Authentication Routes (/api/auth)', () => {
     email: 'apitest@enterprise.io',
     username: 'api_test_user',
     password: 'Password123!',
+    confirmPassword: 'Password123!',
     role: 'STUDENT',
   };
 
@@ -75,6 +76,35 @@ describe('API Test: Authentication Routes (/api/auth)', () => {
     expect(res.body.data.refreshToken).toBeDefined();
 
     refreshToken = res.body.data.refreshToken;
+  });
+
+  it('POST /api/auth/login - Should reject passwords shorter than 6 characters', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({
+        identifier: apiTestUser.email,
+        password: '12345',
+      })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('Password must be at least 6 characters long');
+  });
+
+  it('POST /api/auth/signup - Should reject mismatched confirm password', async () => {
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({
+        ...apiTestUser,
+        email: 'mismatch@enterprise.io',
+        username: 'mismatch_user',
+        password: 'Password123!',
+        confirmPassword: 'WrongPassword',
+      })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('Passwords do not match');
   });
 
   it('POST /api/auth/logout - Should revoke current session', async () => {

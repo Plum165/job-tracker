@@ -7,7 +7,7 @@ export const loginSchema = z.object({
     .min(1, 'Identifier (Email, Username, Student ID, or Employee ID) is required'),
   password: z
     .string()
-    .min(1, 'Password is required'),
+    .min(6, 'Password must be at least 6 characters long'),
 });
 
 export const signupSchema = z.object({
@@ -30,6 +30,9 @@ export const signupSchema = z.object({
     .string()
     .min(6, 'Password must be at least 6 characters long')
     .max(100, 'Password cannot exceed 100 characters'),
+  confirmPassword: z
+    .string()
+    .min(6, 'Password confirmation must be at least 6 characters long'),
   role: z.enum(['STUDENT', 'EMPLOYEE', 'ADMIN']).optional().default('STUDENT'),
   studentId: z
     .string()
@@ -43,6 +46,9 @@ export const signupSchema = z.object({
     .optional()
     .nullable()
     .transform(val => val && val.length > 0 ? val : undefined),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
 });
 
 export const refreshTokenSchema = z.object({

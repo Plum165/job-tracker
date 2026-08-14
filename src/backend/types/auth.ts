@@ -54,6 +54,7 @@ export interface SignupDTO {
   email: string;
   username: string;
   password: string;
+  confirmPassword?: string;
   role?: UserRole;
   studentId?: string;
   employeeId?: string;

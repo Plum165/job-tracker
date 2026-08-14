@@ -19,13 +19,13 @@ export function validateRequest(schema: ZodSchema) {
           path: req.path,
           method: req.method,
           errors: formattedErrors,
-          body: req.body,
+          bodyKeys: Object.keys(req.body ?? {}),
         });
 
         res.status(400).json({
           success: false,
           error: 'Validation Error',
-          message: 'Request payload failed schema validation checks',
+          message: formattedErrors[0]?.message || 'Request payload failed schema validation checks',
           details: formattedErrors,
           timestamp: new Date().toISOString(),
         });

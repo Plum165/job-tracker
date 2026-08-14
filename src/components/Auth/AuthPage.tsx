@@ -20,6 +20,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { IdentifierType } from '../../backend/types/auth';
+import { validateLoginForm, validateSignupForm } from '../../lib/authValidation';
 
 export const AuthPage: React.FC = () => {
   const { login, signup, isLoading, detectIdentifier } = useAuth();
@@ -36,6 +37,7 @@ export const AuthPage: React.FC = () => {
   const [signupEmail, setSignupEmail] = useState('');
   const [signupUsername, setSignupUsername] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [signupRole, setSignupRole] = useState<'STUDENT' | 'EMPLOYEE' | 'ADMIN'>('STUDENT');
   const [signupStudentId, setSignupStudentId] = useState('');
   const [signupEmployeeId, setSignupEmployeeId] = useState('');
@@ -46,10 +48,18 @@ export const AuthPage: React.FC = () => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
+
+    const validationMessage = validateLoginForm(identifier, password);
+    if (validationMessage) {
+      setLoginError(validationMessage);
+      return;
+    }
+
     try {
       await login(identifier, password);
     } catch (err: any) {
-      setLoginError(err.message || 'Authentication failed. Please check your credentials.');
+      const message = err?.message || 'Authentication failed. Please check your credentials.';
+      setLoginError(message);
     }
   };
 
@@ -67,18 +77,33 @@ export const AuthPage: React.FC = () => {
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupError(null);
+
+    const validationMessage = validateSignupForm({
+      fullName: signupFullName,
+      email: signupEmail,
+      username: signupUsername,
+      password: signupPassword,
+      confirmPassword: signupConfirmPassword,
+    });
+
+    if (validationMessage) {
+      setSignupError(validationMessage);
+      return;
+    }
+
     try {
       await signup({
         fullName: signupFullName,
         email: signupEmail,
         username: signupUsername,
         password: signupPassword,
+        confirmPassword: signupConfirmPassword,
         role: signupRole,
         studentId: signupStudentId || undefined,
         employeeId: signupEmployeeId || undefined,
       });
     } catch (err: any) {
-      setSignupError(err.message || 'Account registration failed');
+      setSignupError(err?.message || 'Account registration failed');
     }
   };
 
@@ -343,7 +368,7 @@ export const AuthPage: React.FC = () => {
                 className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-colors cursor-pointer flex items-center justify-center gap-2 min-h-[46px]"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>Sign In to Workspace</span>
+                <span>{isLoading ? 'Signing in...' : 'Sign In to Workspace'}</span>
               </button>
 
             </form>
@@ -444,9 +469,23 @@ export const AuthPage: React.FC = () => {
                 <input
                   type="password"
                   required
-                  placeholder="Min 4 characters"
+                  placeholder="Min 6 characters"
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
+                  className="w-full p-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-300">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Re-enter your password"
+                  value={signupConfirmPassword}
+                  onChange={(e) => setSignupConfirmPassword(e.target.value)}
                   className="w-full p-2.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white"
                 />
               </div>
@@ -463,7 +502,7 @@ export const AuthPage: React.FC = () => {
                 disabled={isLoading}
                 className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-extrabold text-xs uppercase tracking-wider rounded-xl shadow-lg transition-colors cursor-pointer min-h-[44px]"
               >
-                Create Account & Enter Workspace
+                {isLoading ? 'Creating account...' : 'Create Account & Enter Workspace'}
               </button>
             </form>
           )}
