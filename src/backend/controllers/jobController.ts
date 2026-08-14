@@ -93,7 +93,10 @@ router.post('/', validateRequest(createJobSchema), async (req: AuthenticatedRequ
 router.patch('/:id', validateRequest(updateJobSchema), async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) return;
-    const job = await jobService.updateJob(req.user.userId, req.params.id, req.body);
+    const job = await jobService.updateJob(req.user.userId, req.params.id, {
+      ...req.body,
+      requestingUserRole: req.user.role,
+    });
     res.status(200).json({
       success: true,
       data: job,
@@ -112,7 +115,7 @@ router.patch('/:id', validateRequest(updateJobSchema), async (req: Authenticated
 router.delete('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!req.user) return;
-    await jobService.deleteJob(req.user.userId, req.params.id);
+    await jobService.deleteJob(req.user.userId, req.params.id, req.user.role);
     res.status(200).json({
       success: true,
       message: 'Job opportunity deleted successfully',

@@ -28,21 +28,29 @@ export class JobService {
       throw new AppError(`Job opportunity with ID '${jobId}' not found`, 404);
     }
 
-    // Check ownership if not shared
-    if (!existing.isShared && (existing as any).createdById && (existing as any).createdById !== userId) {
+    if (existing.isShared && data.requestingUserRole !== 'ADMIN') {
+      throw new AppError('Only admins can modify public catalog jobs', 403);
+    }
+
+    if (!existing.isShared && (existing as any).createdById !== userId) {
       throw new AppError('Unauthorized to modify this job opportunity', 403);
     }
 
-    return jobRepository.updateJob(jobId, data);
+    const { requestingUserRole, createdById, ...editableData } = data;
+    return jobRepository.updateJob(jobId, editableData);
   }
 
-  async deleteJob(userId: string, jobId: string): Promise<void> {
+  async deleteJob(userId: string, jobId: string, role?: string): Promise<void> {
     const existing = await jobRepository.findById(jobId);
     if (!existing) {
       throw new AppError(`Job opportunity with ID '${jobId}' not found`, 404);
     }
 
-    if (!existing.isShared && (existing as any).createdById && (existing as any).createdById !== userId) {
+    if (existing.isShared && role !== 'ADMIN') {
+      throw new AppError('Only admins can delete public catalog jobs', 403);
+    }
+
+    if (!existing.isShared && (existing as any).createdById !== userId) {
       throw new AppError('Unauthorized to delete this job opportunity', 403);
     }
 

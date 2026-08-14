@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import {
   ApplicationStatus,
@@ -10,51 +10,95 @@ import {
 import { Plus, X } from 'lucide-react';
 
 export const AddOpportunityModal: React.FC = () => {
-  const { isAddOpportunityOpen, setIsAddOpportunityOpen, saveLocalOpportunity } = useWorkspace();
+  const {
+    editingOpportunity,
+    isAddOpportunityOpen,
+    setIsAddOpportunityOpen,
+    saveLocalOpportunity,
+    updateOpportunity,
+  } = useWorkspace();
 
-  const [companyName, setCompanyName] = useState('');
-  const [jobTitle, setJobTitle] = useState('');
-  const [jobCategory, setJobCategory] = useState<JobCategory>('Software Engineering');
-  const [location, setLocation] = useState('South Africa / Hybrid');
-  const [workArrangement, setWorkArrangement] = useState<WorkArrangement>('Hybrid');
-  const [employmentType, setEmploymentType] = useState<EmploymentType>('Graduate role');
-  const [closingDate, setClosingDate] = useState(() => {
+  const defaultClosingDate = () => {
     const d = new Date();
     d.setDate(d.getDate() + 30);
     return d.toISOString().split('T')[0];
-  });
-  const [applicationLink, setApplicationLink] = useState('');
-  const [companyWebsite, setCompanyWebsite] = useState('');
-  const [companyDescription, setCompanyDescription] = useState('');
+  };
+
+  const [companyName, setCompanyName] = useState(editingOpportunity?.companyName || '');
+  const [jobTitle, setJobTitle] = useState(editingOpportunity?.jobTitle || '');
+  const [jobCategory, setJobCategory] = useState<JobCategory>(editingOpportunity?.jobCategory || 'Software Engineering');
+  const [location, setLocation] = useState(editingOpportunity?.location || 'South Africa / Hybrid');
+  const [workArrangement, setWorkArrangement] = useState<WorkArrangement>(editingOpportunity?.workArrangement || 'Hybrid');
+  const [employmentType, setEmploymentType] = useState<EmploymentType>(editingOpportunity?.employmentType || 'Graduate role');
+  const [closingDate, setClosingDate] = useState(editingOpportunity?.closingDate || defaultClosingDate);
+  const [applicationLink, setApplicationLink] = useState(editingOpportunity?.applicationLink || '');
+  const [companyWebsite, setCompanyWebsite] = useState(editingOpportunity?.companyWebsite || '');
+  const [companyDescription, setCompanyDescription] = useState(editingOpportunity?.companyDescription || '');
   const [initialStatus, setInitialStatus] = useState<ApplicationStatus>(ApplicationStatus.NOT_STARTED);
   const [initialNotes, setInitialNotes] = useState('');
-  const [tagsStr, setTagsStr] = useState('Tech, Custom');
+  const [tagsStr, setTagsStr] = useState(editingOpportunity?.tags?.join(', ') || 'Tech, Custom');
+
+  useEffect(() => {
+    if (!isAddOpportunityOpen) return;
+
+    setCompanyName(editingOpportunity?.companyName || '');
+    setJobTitle(editingOpportunity?.jobTitle || '');
+    setJobCategory(editingOpportunity?.jobCategory || 'Software Engineering');
+    setLocation(editingOpportunity?.location || 'South Africa / Hybrid');
+    setWorkArrangement(editingOpportunity?.workArrangement || 'Hybrid');
+    setEmploymentType(editingOpportunity?.employmentType || 'Graduate role');
+    setClosingDate(editingOpportunity?.closingDate || defaultClosingDate());
+    setApplicationLink(editingOpportunity?.applicationLink || '');
+    setCompanyWebsite(editingOpportunity?.companyWebsite || '');
+    setCompanyDescription(editingOpportunity?.companyDescription || '');
+    setInitialStatus(ApplicationStatus.NOT_STARTED);
+    setInitialNotes('');
+    setTagsStr(editingOpportunity?.tags?.join(', ') || 'Tech, Custom');
+  }, [editingOpportunity, isAddOpportunityOpen]);
 
   if (!isAddOpportunityOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const normalizeUrl = (value: string, fallback: string) => {
+    if (!value.trim()) return fallback;
+    return value.startsWith('http') ? value : `https://${value}`;
+  };
+
+  const closeModal = () => setIsAddOpportunityOpen(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName || !jobTitle) return;
 
-    const newOpp: JobOpportunity = {
-      id: `local-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+    const editableFields = {
       companyName,
       jobTitle,
       jobCategory,
       location,
       workArrangement,
       employmentType,
-      dateAdded: new Date().toISOString().split('T')[0],
       closingDate,
-      applicationLink: applicationLink.startsWith('http') ? applicationLink : `https://${applicationLink || 'google.com'}`,
-      companyWebsite: companyWebsite.startsWith('http') ? companyWebsite : `https://${companyWebsite || 'google.com'}`,
+      applicationLink: normalizeUrl(applicationLink, editingOpportunity?.applicationLink || 'https://google.com'),
+      companyWebsite: normalizeUrl(companyWebsite, editingOpportunity?.companyWebsite || 'https://google.com'),
       companyDescription: companyDescription || `${jobTitle} opportunity at ${companyName}.`,
+      generalNotes: editingOpportunity?.generalNotes,
       tags: tagsStr.split(/[,;]/).map((t) => t.trim()).filter(Boolean),
+    };
+
+    if (editingOpportunity) {
+      await updateOpportunity(editingOpportunity.id, editableFields);
+      closeModal();
+      return;
+    }
+
+    const newOpp: JobOpportunity = {
+      id: `local-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      ...editableFields,
+      dateAdded: new Date().toISOString().split('T')[0],
       isShared: false,
     };
 
     saveLocalOpportunity(newOpp, initialStatus, initialNotes);
-    setIsAddOpportunityOpen(false);
+    closeModal();
   };
 
   return (
@@ -68,11 +112,11 @@ export const AddOpportunityModal: React.FC = () => {
               <Plus className="w-4 h-4" />
             </div>
             <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              Add Opportunity
+              {editingOpportunity ? 'Edit Job' : 'Add Opportunity'}
             </h3>
           </div>
           <button
-            onClick={() => setIsAddOpportunityOpen(false)}
+            onClick={closeModal}
             className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
             <X className="w-5 h-5" />
@@ -250,7 +294,7 @@ export const AddOpportunityModal: React.FC = () => {
           <div className="pt-4 flex justify-end gap-3 border-t">
             <button
               type="button"
-              onClick={() => setIsAddOpportunityOpen(false)}
+              onClick={closeModal}
               className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
             >
               Cancel
@@ -259,7 +303,7 @@ export const AddOpportunityModal: React.FC = () => {
               type="submit"
               className="px-5 py-2 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs"
             >
-              Save Opportunity
+              {editingOpportunity ? 'Save Job Changes' : 'Save Opportunity'}
             </button>
           </div>
         </form>

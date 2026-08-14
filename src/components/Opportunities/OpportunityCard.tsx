@@ -53,7 +53,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity })
                 </span>
                 {!opportunity.isShared && (
                   <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.2 bg-blue-50 text-blue-700 dark:bg-slate-800 dark:text-blue-300 border border-blue-200 dark:border-slate-700 rounded">
-                    Local
+                    Private
                   </span>
                 )}
               </div>
@@ -192,4 +192,3 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity })
     </div>
   );
 };
-

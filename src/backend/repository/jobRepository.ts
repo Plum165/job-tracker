@@ -102,7 +102,9 @@ class JobRepository {
         orderBy: { dateAdded: 'desc' },
       });
       if (dbJobs.length > 0) {
-        return dbJobs.map((j: any) => this.mapPrismaJob(j));
+        return dbJobs
+          .map((j: any) => this.mapPrismaJob(j))
+          .filter((j) => !j.isShared || this.isActiveForPublicCatalog(j.closingDate));
       }
     } catch (err) {
       // Fallback to in-memory map
@@ -110,7 +112,7 @@ class JobRepository {
 
     // Merge fallback default shared jobs with any user created fallback jobs
     this.fallbackJobs.forEach((j) => {
-      if (j.isShared || (j as any).createdById === userId) {
+      if ((j.isShared && this.isActiveForPublicCatalog(j.closingDate)) || (j as any).createdById === userId) {
         list.push(j);
       }
     });
@@ -128,7 +130,9 @@ class JobRepository {
         orderBy: { dateAdded: 'desc' },
       });
       if (dbJobs.length > 0) {
-        return dbJobs.map((j: any) => this.mapPrismaJob(j));
+        return dbJobs
+          .map((j: any) => this.mapPrismaJob(j))
+          .filter((j) => this.isActiveForPublicCatalog(j.closingDate));
       }
     } catch (err) {
       // Fallback
@@ -136,7 +140,7 @@ class JobRepository {
 
     const publicList: JobOpportunity[] = [];
     this.fallbackJobs.forEach((j) => {
-      if (j.isShared) publicList.push(j);
+      if (j.isShared && this.isActiveForPublicCatalog(j.closingDate)) publicList.push(j);
     });
     return publicList;
   }
@@ -296,6 +300,42 @@ class JobRepository {
       isShared: u.isShared,
       createdById: u.createdById || undefined,
     };
+  }
+
+  private getTodayString(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  private isActiveForPublicCatalog(closingDate?: string): boolean {
+    if (!closingDate) return true;
+    const parsed = this.parseLocalDate(closingDate);
+    if (!parsed) return true;
+
+    const today = this.parseLocalDate(this.getTodayString());
+    return today ? parsed.getTime() >= today.getTime() : true;
+  }
+
+  private parseLocalDate(dateStr: string): Date | null {
+    const parts = dateStr.trim().split(/[-/]/);
+    if (parts.length === 3) {
+      const year = Number(parts[0]);
+      const month = Number(parts[1]) - 1;
+      const day = Number(parts[2]);
+      if (Number.isInteger(year) && Number.isInteger(month) && Number.isInteger(day)) {
+        const date = new Date(year, month, day);
+        date.setHours(0, 0, 0, 0);
+        return Number.isNaN(date.getTime()) ? null : date;
+      }
+    }
+
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setHours(0, 0, 0, 0);
+    return date;
   }
 }
 

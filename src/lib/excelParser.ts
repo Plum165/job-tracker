@@ -212,7 +212,7 @@ export function exportOpportunitiesToExcel(
       'Employment Type': opp.employmentType,
       'Closing Date': opp.closingDate,
       'Application Link': opp.applicationLink,
-      'Shared/Local': opp.isShared ? 'Shared Catalog' : 'Local Custom',
+      'Catalogue': opp.isShared ? 'Public Catalogue' : 'Private Catalogue',
       'My Status': pState ? pState.status : ApplicationStatus.NOT_STARTED,
       'My Priority': pState ? pState.priority : 'Medium',
       'Date Applied': pState?.dateApplied || '',
@@ -237,7 +237,7 @@ export function exportOpportunitiesToExcel(
     { wch: 16 }, // Employment Type
     { wch: 14 }, // Closing Date
     { wch: 35 }, // Application Link
-    { wch: 16 }, // Shared/Local
+    { wch: 16 }, // Catalogue
     { wch: 22 }, // My Status
     { wch: 12 }, // My Priority
     { wch: 14 }, // Date Applied

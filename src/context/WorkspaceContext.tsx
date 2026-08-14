@@ -32,6 +32,35 @@ const DEFAULT_SETTINGS_VAL: UserSettings = {
   defaultView: 'catalog',
 };
 
+function parseLocalDate(dateStr?: string): Date | null {
+  if (!dateStr) return null;
+  const parts = dateStr.trim().split(/[-/]/);
+  if (parts.length === 3) {
+    const year = Number(parts[0]);
+    const month = Number(parts[1]) - 1;
+    const day = Number(parts[2]);
+    if (Number.isInteger(year) && Number.isInteger(month) && Number.isInteger(day)) {
+      const date = new Date(year, month, day);
+      date.setHours(0, 0, 0, 0);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+  }
+
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function isOpportunityExpired(opp: JobOpportunity): boolean {
+  const closingDate = parseLocalDate(opp.closingDate);
+  if (!closingDate) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return closingDate.getTime() < today.getTime();
+}
+
 interface WorkspaceContextType {
   // Navigation & View
   activeTab: ActiveTab;
@@ -64,6 +93,8 @@ interface WorkspaceContextType {
 
   // Data Collections
   allOpportunities: JobOpportunity[];
+  publicOpportunities: JobOpportunity[];
+  privateOpportunities: JobOpportunity[];
   filteredOpportunities: JobOpportunity[];
   privateStates: Record<string, UserApplicationState>;
   contacts: Contact[];
@@ -75,6 +106,8 @@ interface WorkspaceContextType {
   setSelectedOpportunity: (opp: JobOpportunity | null) => void;
   isAddOpportunityOpen: boolean;
   setIsAddOpportunityOpen: (open: boolean) => void;
+  editingOpportunity: JobOpportunity | null;
+  startEditingOpportunity: (opp: JobOpportunity) => void;
 
   // Data Actions
   getPrivateState: (oppId: string) => UserApplicationState;
@@ -82,6 +115,8 @@ interface WorkspaceContextType {
   updatePriority: (oppId: string, priority: PriorityLevel) => void;
   savePrivateState: (state: UserApplicationState) => void;
   saveLocalOpportunity: (opp: JobOpportunity, initialStatus?: ApplicationStatus, initialNotes?: string) => void;
+  updateOpportunity: (oppId: string, updates: Partial<JobOpportunity>) => Promise<void>;
+  copyOpportunityToPrivate: (opp: JobOpportunity) => Promise<void>;
   deleteLocalOpportunity: (oppId: string) => void;
   saveContact: (contact: Contact) => void;
   deleteContact: (contactId: string) => void;
@@ -128,6 +163,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Selected item modals
   const [selectedOpportunity, setSelectedOpportunity] = useState<JobOpportunity | null>(null);
   const [isAddOpportunityOpen, setIsAddOpportunityOpen] = useState(false);
+  const [editingOpportunity, setEditingOpportunity] = useState<JobOpportunity | null>(null);
 
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -150,17 +186,20 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       if (isAuthenticated && tokens?.accessToken) {
         setIsSyncingData(true);
         try {
-          const [jobsData, appsData, contactsData] = await Promise.all([
-            JobTrackerAPI.getVisibleJobs(tokens.accessToken).catch(() => []),
+          const [publicJobsData, privateJobsData, appsData, contactsData] = await Promise.all([
+            JobTrackerAPI.getPublicJobs(tokens.accessToken).catch(() => []),
+            JobTrackerAPI.getUserPrivateJobs(tokens.accessToken).catch(() => []),
             JobTrackerAPI.getUserApplications(tokens.accessToken).catch(() => ({})),
             JobTrackerAPI.getContacts(tokens.accessToken).catch(() => []),
           ]);
 
-          if (Array.isArray(jobsData) && jobsData.length > 0) {
-            setServerOpportunities(jobsData);
-          } else {
-            setServerOpportunities(DEFAULT_SHARED_OPPORTUNITIES);
-          }
+          const activeDefaultOpportunities = DEFAULT_SHARED_OPPORTUNITIES.filter((opp) => !isOpportunityExpired(opp));
+          const publicJobs = Array.isArray(publicJobsData) && publicJobsData.length > 0
+            ? publicJobsData
+            : activeDefaultOpportunities;
+          const privateJobs = Array.isArray(privateJobsData) ? privateJobsData : [];
+          setServerOpportunities([...publicJobs, ...privateJobs]);
+          setLocalOpportunities([]);
 
           if (appsData && typeof appsData === 'object') {
             setPrivateStates(appsData as Record<string, UserApplicationState>);
@@ -196,13 +235,17 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [isAuthenticated, tokens?.accessToken]);
 
   // Combined opportunities (Shared catalog + User created jobs)
+  const activeDefaultOpportunities = DEFAULT_SHARED_OPPORTUNITIES.filter((opp) => !isOpportunityExpired(opp));
   const baseOpportunities = isAuthenticated && serverOpportunities.length > 0
     ? serverOpportunities
-    : [...DEFAULT_SHARED_OPPORTUNITIES, ...localOpportunities];
+    : [...activeDefaultOpportunities, ...localOpportunities];
 
-  // Scope filtering (All, Public Catalog Only, My Private Applications Only)
+  const publicOpportunities = baseOpportunities.filter((opp) => opp.isShared && !isOpportunityExpired(opp));
+  const privateOpportunities = baseOpportunities.filter((opp) => !opp.isShared);
+
+  // Scope filtering (All, Public Catalogue, Private Catalogue)
   const scopeFilteredOpportunities = baseOpportunities.filter((opp) => {
-    if (catalogScope === 'public') return opp.isShared;
+    if (catalogScope === 'public') return opp.isShared && !isOpportunityExpired(opp);
     if (catalogScope === 'private') return !opp.isShared;
     return true;
   });
@@ -432,6 +475,61 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
+  const updateOpportunity = async (oppId: string, updates: Partial<JobOpportunity>) => {
+    const existing = baseOpportunities.find((opp) => opp.id === oppId);
+    if (!existing) {
+      addToast('Update Failed', 'The selected job could not be found.', 'error');
+      return;
+    }
+
+    const updatedOpportunity = { ...existing, ...updates };
+    setServerOpportunities((prev) => prev.map((opp) => (opp.id === oppId ? updatedOpportunity : opp)));
+    setLocalOpportunities((prev) => prev.map((opp) => (opp.id === oppId ? updatedOpportunity : opp)));
+    if (selectedOpportunity?.id === oppId) {
+      setSelectedOpportunity(updatedOpportunity);
+    }
+
+    if (isAuthenticated && tokens?.accessToken) {
+      try {
+        const persisted = await JobTrackerAPI.updateJob(tokens.accessToken, oppId, updates);
+        setServerOpportunities((prev) => prev.map((opp) => (opp.id === oppId ? persisted : opp)));
+        if (selectedOpportunity?.id === oppId) {
+          setSelectedOpportunity(persisted);
+        }
+        addToast('Job Updated', `${persisted.companyName} - ${persisted.jobTitle} was saved.`, 'success');
+      } catch (e: any) {
+        setServerOpportunities((prev) => prev.map((opp) => (opp.id === oppId ? existing : opp)));
+        setLocalOpportunities((prev) => prev.map((opp) => (opp.id === oppId ? existing : opp)));
+        setSelectedOpportunity(existing);
+        addToast('Update Failed', e?.message || 'Could not save job changes.', 'error');
+        throw e;
+      }
+    } else {
+      WorkspaceStorage.saveLocalOpportunity(updatedOpportunity);
+      addToast('Job Updated', `${updatedOpportunity.companyName} - ${updatedOpportunity.jobTitle} was saved locally.`, 'success');
+    }
+  };
+
+  const copyOpportunityToPrivate = async (opp: JobOpportunity) => {
+    const copiedOpportunity: JobOpportunity = {
+      ...opp,
+      id: `private-copy-${opp.id}-${Date.now()}`,
+      isShared: false,
+      createdById: undefined,
+      dateAdded: new Date().toISOString().split('T')[0],
+      tags: Array.from(new Set([...(opp.tags || []), 'Saved'])),
+    };
+
+    await saveLocalOpportunity(copiedOpportunity, ApplicationStatus.NOT_STARTED, '');
+    addToast('Copied to Private Catalogue', `${opp.companyName} - ${opp.jobTitle} is now in your private catalogue.`, 'success');
+  };
+
+  const startEditingOpportunity = (opp: JobOpportunity) => {
+    setEditingOpportunity(opp);
+    setSelectedOpportunity(null);
+    setIsAddOpportunityOpen(true);
+  };
+
   const deleteLocalOpportunity = async (oppId: string) => {
     setLocalOpportunities((prev) => prev.filter((o) => o.id !== oppId));
     setServerOpportunities((prev) => prev.filter((o) => o.id !== oppId));
@@ -579,6 +677,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setSortBy,
         resetFilters,
         allOpportunities: baseOpportunities,
+        publicOpportunities,
+        privateOpportunities,
         filteredOpportunities,
         privateStates,
         contacts,
@@ -587,12 +687,19 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         selectedOpportunity,
         setSelectedOpportunity,
         isAddOpportunityOpen,
-        setIsAddOpportunityOpen,
+        setIsAddOpportunityOpen: (open: boolean) => {
+          setIsAddOpportunityOpen(open);
+          if (!open) setEditingOpportunity(null);
+        },
+        editingOpportunity,
+        startEditingOpportunity,
         getPrivateState,
         updateStatus,
         updatePriority,
         savePrivateState,
         saveLocalOpportunity,
+        updateOpportunity,
+        copyOpportunityToPrivate,
         deleteLocalOpportunity,
         saveContact,
         deleteContact,

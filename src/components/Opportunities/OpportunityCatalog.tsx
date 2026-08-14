@@ -21,6 +21,8 @@ import {
 export const OpportunityCatalog: React.FC = () => {
   const {
     allOpportunities,
+    publicOpportunities,
+    privateOpportunities,
     filteredOpportunities,
     catalogViewMode,
     setCatalogViewMode,
@@ -85,11 +87,11 @@ export const OpportunityCatalog: React.FC = () => {
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-              Catalog View Mode & Scope
+              Catalogue View
             </span>
           </div>
           <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-            Personal application state & notes remain 100% private
+            Public jobs show active deadlines only; private jobs are yours and can include expired opportunities
           </span>
         </div>
 
@@ -115,7 +117,7 @@ export const OpportunityCatalog: React.FC = () => {
             }`}
           >
             <Globe className="w-4 h-4 text-blue-400" />
-            <span>Public Shared Catalog ({allOpportunities.filter((o) => o.isShared).length})</span>
+            <span>Public Catalogue ({publicOpportunities.length})</span>
           </button>
 
           <button
@@ -127,7 +129,7 @@ export const OpportunityCatalog: React.FC = () => {
             }`}
           >
             <Lock className="w-4 h-4 text-indigo-400" />
-            <span>My Private Applications ({allOpportunities.filter((o) => !o.isShared).length})</span>
+            <span>Private Catalogue ({privateOpportunities.length})</span>
           </button>
         </div>
       </div>

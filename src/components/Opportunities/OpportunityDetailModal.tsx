@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { useAuth } from '../../context/AuthContext';
 import { formatDateDisplay, getDeadlineStatusBadge } from '../../lib/dateUtils';
 import {
   ApplicationStatus,
@@ -12,7 +13,9 @@ import {
 import {
   Calendar,
   CheckSquare,
+  Copy,
   Clock,
+  Edit3,
   ExternalLink,
   FileText,
   Globe,
@@ -27,6 +30,7 @@ import {
 } from 'lucide-react';
 
 export const OpportunityDetailModal: React.FC = () => {
+  const { user } = useAuth();
   const {
     selectedOpportunity,
     setSelectedOpportunity,
@@ -36,12 +40,23 @@ export const OpportunityDetailModal: React.FC = () => {
     updatePriority,
     contacts,
     saveContact,
+    startEditingOpportunity,
+    copyOpportunityToPrivate,
+    privateOpportunities,
   } = useWorkspace();
 
   if (!selectedOpportunity) return null;
 
   const pState = getPrivateState(selectedOpportunity.id);
   const badge = getDeadlineStatusBadge(selectedOpportunity.closingDate);
+  const isPublicJob = selectedOpportunity.isShared;
+  const isCopiedToPrivate = privateOpportunities.some(
+    (opp) =>
+      opp.companyName === selectedOpportunity.companyName &&
+      opp.jobTitle === selectedOpportunity.jobTitle &&
+      opp.applicationLink === selectedOpportunity.applicationLink
+  );
+  const canEditJob = !isPublicJob || user?.role === 'ADMIN';
 
   // Local form state for modal editing
   const [activeTab, setActiveTab] = useState<'notes' | 'checklist' | 'interviews' | 'links' | 'contacts'>('notes');
@@ -134,6 +149,13 @@ export const OpportunityDetailModal: React.FC = () => {
               <span className={`text-[11px] px-2.5 py-0.5 rounded-full border ${badge.badgeClass}`}>
                 {badge.label}
               </span>
+              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${
+                isPublicJob
+                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                  : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800'
+              }`}>
+                {isPublicJob ? 'Public Catalogue' : 'Private Catalogue'}
+              </span>
             </div>
             <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 mt-0.5">
               {selectedOpportunity.jobTitle}
@@ -206,6 +228,31 @@ export const OpportunityDetailModal: React.FC = () => {
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {canEditJob && (
+              <button
+                type="button"
+                onClick={() => startEditingOpportunity(selectedOpportunity)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white text-white dark:text-slate-900 rounded-lg transition-colors"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Edit Job</span>
+              </button>
+            )}
+
+            {isPublicJob && (
+              <button
+                type="button"
+                disabled={isCopiedToPrivate}
+                onClick={() => copyOpportunityToPrivate(selectedOpportunity)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:text-slate-600 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 text-white rounded-lg transition-colors"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>{isCopiedToPrivate ? 'Saved to Private' : 'Copy to Private'}</span>
+              </button>
+            )}
           </div>
 
           {/* Shared Description */}
