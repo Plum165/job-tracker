@@ -196,47 +196,4 @@ router.post('/revoke-all', authenticateToken, async (req: AuthenticatedRequest, 
   }
 });
 
-/**
- * GET /api/auth/demo-credentials
- * Helper endpoint for UI testing multi-identifier login
- */
-router.get('/demo-credentials', async (req, res) => {
-  res.status(200).json({
-    message: 'Enterprise Multi-Identifier Demo Login Credentials (Password for all: Password123!)',
-    demoAccounts: [
-      {
-        name: 'Multi-ID Admin User',
-        identifiers: {
-          email: 'architect@enterprise.io',
-          studentId: 'STU98765',
-          employeeId: 'EMP102',
-          username: 'architect99',
-        },
-        password: 'Password123!',
-        role: 'ADMIN',
-      },
-      {
-        name: 'Graduate Student User',
-        identifiers: {
-          email: 'student@university.edu',
-          studentId: 'STU54321',
-          username: 'jordan_student',
-        },
-        password: 'Password123!',
-        role: 'STUDENT',
-      },
-      {
-        name: 'Senior Employee User',
-        identifiers: {
-          email: 'employee@company.com',
-          employeeId: 'EMP808',
-          username: 'taylor_dev',
-        },
-        password: 'Password123!',
-        role: 'EMPLOYEE',
-      },
-    ],
-  });
-});
-
 export default router;

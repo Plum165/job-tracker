@@ -16,7 +16,7 @@ import {
   WorkArrangement,
 } from '../types';
 
-export type ActiveTab = 'dashboard' | 'catalog' | 'kanban' | 'calendar' | 'contacts' | 'data' | 'auth';
+export type ActiveTab = 'dashboard' | 'catalog' | 'kanban' | 'calendar' | 'contacts' | 'data';
 export type CatalogScope = 'all' | 'public' | 'private';
 
 export interface ToastMessage {

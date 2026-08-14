@@ -9,12 +9,11 @@ import { AddOpportunityModal } from './components/Opportunities/AddOpportunityMo
 import { OpportunityCatalog } from './components/Opportunities/OpportunityCatalog';
 import { OpportunityDetailModal } from './components/Opportunities/OpportunityDetailModal';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
-import { EnterpriseAuthView } from './components/Auth/EnterpriseAuthView';
 import { AuthPage } from './components/Auth/AuthPage';
 import { ToastContainer } from './components/UI/ToastContainer';
 import { useWorkspace, WorkspaceProvider } from './context/WorkspaceContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { Briefcase, ShieldCheck } from 'lucide-react';
+import { Briefcase } from 'lucide-react';
 
 const MainContent: React.FC = () => {
   const { activeTab } = useWorkspace();
@@ -28,7 +27,6 @@ const MainContent: React.FC = () => {
         {activeTab === 'calendar' && <CalendarView />}
         {activeTab === 'contacts' && <ContactsView />}
         {activeTab === 'data' && <DataManagementView />}
-        {activeTab === 'auth' && <EnterpriseAuthView />}
       </ProtectedRoute>
     </main>
   );
